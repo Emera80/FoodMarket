@@ -84,11 +84,11 @@ export default function AdminLayout() {
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-72' : 'ml-20'}`}>
         
         {/* Topbar Interne */}
-        <header className="bg-white border-b border-gray-200 h-20 flex items-center justify-between px-8 sticky top-0 z-40">
-          <div className="flex items-center gap-4 bg-gray-100 px-4 py-2 rounded-xl w-96">
-            <Search size={18} className="text-gray-400" />
-            <input type="text" placeholder="Rechercher une commande..." className="bg-transparent border-none outline-none text-sm w-full font-medium" />
-          </div>
+        <header className="bg-white border-b border-gray-200 h-20 flex items-center justify-end px-8 sticky top-0 z-40">
+          {/*<><div className="flex items-center gap-4 bg-gray-100 px-4 py-2 rounded-xl w-96">*/}
+          {/*  <Search size={18} className="text-gray-400" />*/}
+          {/*  <input type="text" placeholder="Rechercher une commande..." className="bg-transparent border-none outline-none text-sm w-full font-medium" />*/}
+          {/*</div></>*/}
           
           <div className="flex items-center gap-6">
             

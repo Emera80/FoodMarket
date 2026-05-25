@@ -2,6 +2,8 @@ from django.db import models
 
 # Create your models here.
 from django.conf import settings
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 class Avis(models.Model):
     # Lien vers l'utilisateur (on utilise ton modèle Utilisateur via settings.AUTH_USER_MODEL)
@@ -98,3 +100,27 @@ class Notification(models.Model):
     class Meta:
         db_table = 'notifications'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Si c'est une nouvelle notification, on l'envoie via WebSocket
+        if is_new:
+            try:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'admin_notifications',  # Le groupe défini dans consumers.py
+                    {
+                        'type': 'send_admin_notification', # La méthode dans consumers.py
+                        'valeur': {
+                            'id': self.id,
+                            'titre': self.titre,
+                            'description': self.description,
+                            'url_redirection': self.url_redirection,
+                            'created_at': self.created_at.isoformat() if self.created_at else None,
+                        }
+                    }
+                )
+            except Exception as e:
+                print(f"Erreur lors de l'envoi de la notification WS : {e}")

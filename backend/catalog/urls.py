@@ -5,7 +5,8 @@ from .views import (
     RestaurantViewSet, 
     PlatViewSet, 
     ContactMessageViewSet, 
-    NotificationViewSet
+    NotificationViewSet,
+    CreatePaymentIntentView,
 )
 
 # Le routeur génère automatiquement les URLs pour l'API
@@ -17,4 +18,5 @@ router.register(r'notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),
 ]

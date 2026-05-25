@@ -1,6 +1,10 @@
 from django.shortcuts import render
+import stripe
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework import status
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.decorators import action # <-- Ajoute cet import
 from rest_framework.response import Response # <-- Ajoute cet import
 from django.db.models import Sum
@@ -14,6 +18,42 @@ from accounts.models import Utilisateur
 from .serializers import ContactMessageSerializer, NotificationSerializer
 
 # Create your views here.
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+class CreatePaymentIntentView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        try:
+            # 1. On récupère le montant envoyé par React.
+            # 🚨 ATTENTION : Stripe compte toujours en CENTIMES !
+            # Pour l'EUR, 1 euro = 100 centimes.
+            data = request.data
+            montant_total = int(data.get('amount', 0))
+
+            if montant_total <= 0:
+                return Response(
+                    {'error': 'Le montant doit être supérieur à zéro.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 2. On demande à Stripe de créer une intention de paiement
+            intent = stripe.PaymentIntent.create(
+                amount=montant_total,
+                currency='eur',  # On fixe la devise en euros
+                payment_method_types=['card'],
+                description=f"Commande pour l'utilisateur {request.user.email}",
+            )
+
+            # 3. On renvoie la clé de déverrouillage (client_secret) à React
+            return Response({
+                'clientSecret': intent['client_secret']
+            })
+
+        except Exception as e:
+            # En cas de problème (ex: clé invalide), on renvoie l'erreur
+            print(f"STRIPE ERROR: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class ContactMessageViewSet(viewsets.ModelViewSet):
     queryset = ContactMessage.objects.all()
@@ -31,6 +71,8 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
         message = serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
         
         # Notification pour l'ADMIN uniquement
+        # On crée la notification en base de données pour garder l'historique
+        # Le broadcasting est maintenant géré automatiquement par Notification.save()
         admins = Utilisateur.objects.filter(role='admin')
         for admin in admins:
             Notification.objects.create(
@@ -39,6 +81,7 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
                 description=f"{message.nom} a envoyé un message : {message.sujet}",
                 url_redirection="/admin/messages"
             )
+
     # --- AJOUTE CECI ---
     @action(detail=True, methods=['post'])
     def repondre(self, request, pk=None):

@@ -10,6 +10,37 @@ export default function UserMessages() {
   const [searchParams]            = useSearchParams();
   const targetId                  = Number(searchParams.get('open'));
   const targetRef                 = useRef(null);
+  const [userRole, setUserRole] = useState(localStorage.getItem('user_role') || 'client');
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
+
+
+    useEffect(() => {
+    const handleAuthChange = () => {
+      setIsLoggedIn(!!localStorage.getItem('access_token'));
+      setUserRole(localStorage.getItem('user_role') || 'client');
+    };
+
+
+    window.addEventListener('authChange', handleAuthChange);
+
+    // Au chargement, on récupère les infos (Rôle uniquement)
+    if (isLoggedIn && (!localStorage.getItem('user_role'))) {
+        api.get('/accounts/utilisateurs/').then(res => {
+            const users = res.data.results || res.data;
+            const user = users[0] || users;
+
+            // ON SAUVEGARDE LE RÔLE
+            if (user.role) {
+                setUserRole(user.role);
+                localStorage.setItem('user_role', user.role);
+            }
+        }).catch(err => console.error(err));
+    }
+
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange);
+    };
+  }, [isLoggedIn, userRole]);
 
   useEffect(() => {
     const fetchMyMessages = async () => {
@@ -50,8 +81,13 @@ export default function UserMessages() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 min-h-screen">
-      <h1 className="text-3xl font-black text-gray-900 mb-2">Mes échanges avec le support</h1>
-      <p className="text-gray-400 font-medium mb-8">Retrouvez ici toutes vos demandes et les réponses de notre équipe.</p>
+      {/*je veux creer un condition d'affichage si c'est l'admin qui est connecté c'est : Mes échanges avec les clients*/}
+      <h1 className="text-3xl font-black text-gray-900 mb-2">
+        {userRole === 'admin' ? 'Mes échanges avec les clients' : 'Mes échanges avec le support'}
+      </h1>
+      <p className="text-gray-400 font-medium mb-8">
+        {userRole === 'admin' ? 'Retrouvez ici toutes vos demandes et les réponses de notre équipe.' : 'Retrouvez ici toutes vos demandes et les réponses de notre équipe.'}
+      </p>
 
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-gray-300">

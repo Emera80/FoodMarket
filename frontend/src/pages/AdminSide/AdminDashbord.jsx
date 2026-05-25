@@ -161,7 +161,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
           <h3 className="font-black text-gray-900 mb-6 uppercase text-xs tracking-widest">Évolution CA & Commandes</h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={320}>
               {/* Composant chart mixte de Recharts */}
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
           <h3 className="font-black text-gray-900 mb-6 uppercase text-xs tracking-widest">Répartition des ventes (Restaurants)</h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value" stroke="none">
                   {pieData.map((entry, index) => (

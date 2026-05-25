@@ -11,9 +11,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -30,7 +34,10 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+# 🚨 DAPHNE DOIT ÊTRE ABSOLUMENT LE PREMIER DE LA LISTE !
+# Il va remplacer le serveur de développement par défaut de Django.
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,6 +50,7 @@ INSTALLED_APPS = [
     'accounts',
     'catalog',
     'orders',
+    'channels', #ajout de channels
 ]
 
 MIDDLEWARE = [
@@ -77,7 +85,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+# 2. Cherche la ligne WSGI_APPLICATION (elle ressemble à 'ton_projet.wsgi.application')
+# Commente-la (ou supprime-la) et remplace-la par ASGI_APPLICATION :
+# WSGI_APPLICATION = 'ton_projet.wsgi.application'
+
+#WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 
 # Database
@@ -153,3 +166,18 @@ import os # N'oublie pas cet import en haut du fichier si ce n'est pas fait
 # Médias (Fichiers uploadés par les utilisateurs)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# 3. Ajoute tout en bas de ton settings.py la configuration du "Channel Layer" (Redis)
+# C'est ce qui permet aux différentes connexions de communiquer entre elles.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            # On pointe vers le port 6379 que l'on vient d'ouvrir avec Docker
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
+# Configuration Stripe (Mode Test)
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY') # 🚨 Remplace par ta vraie clé commençant par sk_test_

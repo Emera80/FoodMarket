@@ -1,9 +1,11 @@
 from django.shortcuts import render
-
+from rest_framework.decorators import api_view, permission_classes
 # Create your views here.
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth import update_session_auth_hash
 
 from .models import Utilisateur
 from .serializers import UtilisateurSerializer, MyTokenObtainPairSerializer
@@ -35,3 +37,29 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
         if user.is_authenticated:
             return Utilisateur.objects.filter(id=user.id)
         return Utilisateur.objects.none()  # Renvoie vide si non connecté
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    # On met à jour avec les nouvelles données, ou on garde les anciennes si le champ est vide
+    user.nom = request.data.get('nom', user.nom)
+    user.email = request.data.get('email', user.email)
+    user.save()
+    return Response({'message': 'Profil mis à jour avec succès', 'nom': user.nom, 'email': user.email})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+
+    # Vérification de l'ancien mot de passe
+    if not user.check_password(old_password):
+        return Response({'error': 'Ancien mot de passe incorrect'}, status=400)
+
+    # Définition du nouveau mot de passe
+    user.set_password(new_password)
+    user.save()
+    return Response({'message': 'Mot de passe modifié avec succès'})

@@ -25,7 +25,7 @@ class CommandeSerializer(serializers.ModelSerializer):
         model = Commande
         fields = [
             'id', 'user', 'restaurant', 'date', 'total',
-            'statut_livraison', 'adresse_livraison', 'mode_paiement', 'items', 'user_name', 'user_phone', 'restaurant_nom'
+            'statut_livraison', 'adresse_livraison', 'telephone_paiement', 'mode_paiement', 'items', 'user_name', 'user_phone', 'restaurant_nom'
         ]
         # Ces champs sont protégés. Le React ne doit pas pouvoir les modifier directement.
         # L'utilisateur sera ajouté automatiquement par notre Vue grâce au JWT.
