@@ -1,75 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import api from '../../services/api';
+import React from 'react';
 import { MessageCircle, ChevronDown, ChevronUp, Loader2, InboxIcon } from 'lucide-react';
+import { useUserMessages } from '../../hooks/useUserMessages';
 
 export default function UserMessages() {
-  const [messages, setMessages]   = useState([]);
-  const [expanded, setExpanded]   = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [searchParams]            = useSearchParams();
-  const targetId                  = Number(searchParams.get('open'));
-  const targetRef                 = useRef(null);
-  const [userRole, setUserRole] = useState(localStorage.getItem('user_role') || 'client');
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('access_token'));
-
-
-    useEffect(() => {
-    const handleAuthChange = () => {
-      setIsLoggedIn(!!localStorage.getItem('access_token'));
-      setUserRole(localStorage.getItem('user_role') || 'client');
-    };
-
-
-    window.addEventListener('authChange', handleAuthChange);
-
-    // Au chargement, on récupère les infos (Rôle uniquement)
-    if (isLoggedIn && (!localStorage.getItem('user_role'))) {
-        api.get('/accounts/utilisateurs/').then(res => {
-            const users = res.data.results || res.data;
-            const user = users[0] || users;
-
-            // ON SAUVEGARDE LE RÔLE
-            if (user.role) {
-                setUserRole(user.role);
-                localStorage.setItem('user_role', user.role);
-            }
-        }).catch(err => console.error(err));
-    }
-
-    return () => {
-      window.removeEventListener('authChange', handleAuthChange);
-    };
-  }, [isLoggedIn, userRole]);
-
-  useEffect(() => {
-    const fetchMyMessages = async () => {
-      try {
-        const res = await api.get('/catalog/contact/');
-        const data = res.data.results || res.data;
-        setMessages(data);
-
-        // Auto-ouvrir le message ciblé par la notification
-        if (targetId) {
-          setExpanded(targetId);
-        }
-      } catch (err) {
-        console.error('Erreur chargement messages:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMyMessages();
-  }, [targetId]);
-
-  // Scroll vers le message ciblé une fois rendu
-  useEffect(() => {
-    if (targetId && targetRef.current) {
-      setTimeout(() => {
-        targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 200);
-    }
-  }, [targetId, messages]);
+  const {
+    messages, loading,
+    expanded, toggleExpanded,
+    targetId, targetRef,
+    userRole,
+  } = useUserMessages();
 
   if (loading) {
     return (
@@ -81,12 +20,11 @@ export default function UserMessages() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 min-h-screen">
-      {/*je veux creer un condition d'affichage si c'est l'admin qui est connecté c'est : Mes échanges avec les clients*/}
       <h1 className="text-3xl font-black text-gray-900 mb-2">
         {userRole === 'admin' ? 'Mes échanges avec les clients' : 'Mes échanges avec le support'}
       </h1>
       <p className="text-gray-400 font-medium mb-8">
-        {userRole === 'admin' ? 'Retrouvez ici toutes vos demandes et les réponses de notre équipe.' : 'Retrouvez ici toutes vos demandes et les réponses de notre équipe.'}
+        Retrouvez ici toutes vos demandes et les réponses de notre équipe.
       </p>
 
       {messages.length === 0 ? (
@@ -98,20 +36,18 @@ export default function UserMessages() {
       ) : (
         <div className="space-y-4">
           {messages.map((m) => {
-            const isTarget  = m.id === targetId;
-            const isOpen    = expanded === m.id;
-            const hasReply  = !!m.reponse;
+            const isTarget = m.id === targetId;
+            const isOpen   = expanded === m.id;
+            const hasReply = !!m.reponse;
 
             return (
               <div
                 key={m.id}
                 ref={isTarget ? targetRef : null}
-                className={`bg-white rounded-3xl border shadow-sm overflow-hidden transition-all ${
-                  isTarget ? 'border-orange-400 ring-2 ring-orange-200' : 'border-gray-100'
-                }`}
+                className={`bg-white rounded-3xl border shadow-sm overflow-hidden transition-all ${isTarget ? 'border-orange-400 ring-2 ring-orange-200' : 'border-gray-100'}`}
               >
                 <button
-                  onClick={() => setExpanded(isOpen ? null : m.id)}
+                  onClick={() => toggleExpanded(m.id)}
                   className="w-full p-6 flex justify-between items-center hover:bg-gray-50 transition-colors text-left"
                 >
                   <div className="flex items-center gap-4">
@@ -132,12 +68,9 @@ export default function UserMessages() {
                       </p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-3 shrink-0">
                     {hasReply && (
-                      <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-black uppercase">
-                        Répondu
-                      </span>
+                      <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-black uppercase">Répondu</span>
                     )}
                     {isOpen ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
                   </div>
@@ -149,12 +82,9 @@ export default function UserMessages() {
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Votre message :</p>
                       <p className="text-gray-700 font-medium italic leading-relaxed">"{m.message}"</p>
                     </div>
-
                     {hasReply ? (
                       <div className="bg-white p-6 rounded-2xl border-l-4 border-green-500 shadow-sm">
-                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">
-                          Réponse de l'équipe support :
-                        </p>
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">Réponse de l'équipe support :</p>
                         <p className="text-gray-900 font-bold leading-relaxed">{m.reponse}</p>
                       </div>
                     ) : (
