@@ -11,8 +11,8 @@ from .views import (
 
 # Le routeur génère automatiquement les URLs pour l'API
 router = DefaultRouter()
-router.register(r'restaurants', RestaurantViewSet)
-router.register(r'plats', PlatViewSet)
+router.register(r'restaurants', RestaurantViewSet, basename='restaurant')
+router.register(r'plats', PlatViewSet, basename='plat')
 router.register(r'contact', ContactMessageViewSet, basename='contact')
 router.register(r'notifications', NotificationViewSet, basename='notifications')
 

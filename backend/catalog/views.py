@@ -1,176 +1,145 @@
-from django.shortcuts import render
+"""
+catalog/views.py
+----------------
+Vues "Skinny" : chaque vue se limite à son rôle HTTP.
+  1. Valider la requête / les données (serializers).
+  2. Déléguer la logique métier au service approprié (services.py).
+  3. Retourner la Response.
+"""
+
 import stripe
-from django.conf import settings
 from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from rest_framework.decorators import action # <-- Ajoute cet import
-from rest_framework.response import Response # <-- Ajoute cet import
-from django.db.models import Sum
-from django.db.models.functions import Coalesce
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-from .models import Restaurant, Plat
-from .serializers import RestaurantSerializer, PlatSerializer, AvisSerializer
-from .models import ContactMessage, Notification 
-# Importe ton modèle Utilisateur
-from accounts.models import Utilisateur
-from .serializers import ContactMessageSerializer, NotificationSerializer
+from .models import Restaurant, Plat, ContactMessage, Notification
+from .serializers import (
+    RestaurantSerializer, PlatSerializer, AvisSerializer,
+    ContactMessageSerializer, NotificationSerializer,
+)
+from .services import (
+    create_payment_intent,
+    notify_admins_new_message,
+    notify_client_reply,
+)
 
-# Create your views here.
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
+# ─────────────────────────────────────────────
+# PAIEMENT STRIPE
+# ─────────────────────────────────────────────
 
 class CreatePaymentIntentView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         try:
-            # 1. On récupère le montant envoyé par React.
-            # 🚨 ATTENTION : Stripe compte toujours en CENTIMES !
-            # Pour l'EUR, 1 euro = 100 centimes.
-            data = request.data
-            montant_total = int(data.get('amount', 0))
-
-            if montant_total <= 0:
-                return Response(
-                    {'error': 'Le montant doit être supérieur à zéro.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # 2. On demande à Stripe de créer une intention de paiement
-            intent = stripe.PaymentIntent.create(
-                amount=montant_total,
-                currency='eur',  # On fixe la devise en euros
-                payment_method_types=['card'],
-                description=f"Commande pour l'utilisateur {request.user.email}",
-            )
-
-            # 3. On renvoie la clé de déverrouillage (client_secret) à React
-            return Response({
-                'clientSecret': intent['client_secret']
-            })
-
-        except Exception as e:
-            # En cas de problème (ex: clé invalide), on renvoie l'erreur
-            print(f"STRIPE ERROR: {str(e)}")
+            amount_cents = int(request.data.get('amount', 0))
+            result = create_payment_intent(amount_cents, request.user.email)
+            return Response(result)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.StripeError as e:
+            print(f"[STRIPE ERROR] {e}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# ─────────────────────────────────────────────
+# MESSAGES DE CONTACT
+# ─────────────────────────────────────────────
+
 class ContactMessageViewSet(viewsets.ModelViewSet):
-    queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
 
     def get_queryset(self):
         user = self.request.user
-        # L'admin voit tout, le client ne voit que ses messages
         if getattr(user, 'role', '') == 'admin':
             return ContactMessage.objects.all()
         return ContactMessage.objects.filter(user=user)
 
     def perform_create(self, serializer):
-        # On lie le message à l'utilisateur connecté
-        message = serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
-        
-        # Notification pour l'ADMIN uniquement
-        # On crée la notification en base de données pour garder l'historique
-        # Le broadcasting est maintenant géré automatiquement par Notification.save()
-        admins = Utilisateur.objects.filter(role='admin')
-        for admin in admins:
-            Notification.objects.create(
-                user=admin,
-                titre="Nouveau message client",
-                description=f"{message.nom} a envoyé un message : {message.sujet}",
-                url_redirection="/admin/messages"
-            )
+        user = self.request.user if self.request.user.is_authenticated else None
+        message = serializer.save(user=user)
+        notify_admins_new_message(message)
 
-    # --- AJOUTE CECI ---
     @action(detail=True, methods=['post'])
     def repondre(self, request, pk=None):
         message = self.get_object()
-        reponse_texte = request.data.get('reponse', '')
-
-        # 1. On enregistre la réponse dans le message
-        message.reponse = reponse_texte
+        message.reponse = request.data.get('reponse', '')
         message.est_lu = True
         message.save()
-
-        # 2. Notification pour le CLIENT uniquement
-        if message.user:
-            Notification.objects.create(
-                user=message.user,
-                titre="Réponse du support",
-                description=f"L'admin a répondu à votre message : {message.sujet}",
-                url_redirection=f"/profile/messages?open={message.id}"
-            )
-        
+        notify_client_reply(message)
         return Response({'status': 'Réponse envoyée'})
+
+
+# ─────────────────────────────────────────────
+# NOTIFICATIONS
+# ─────────────────────────────────────────────
 
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
-        # L'admin ne voit que ses propres notifications
         return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def marquer_lu(self, request, pk=None):
+        notification = self.get_object()
+        notification.est_lu = True
+        notification.save()
+        return Response({'status': 'ok'})
 
     @action(detail=False, methods=['post'])
     def marquer_tout_lu(self, request):
         self.get_queryset().update(est_lu=True)
         return Response({'status': 'ok'})
 
+
+# ─────────────────────────────────────────────
+# RESTAURANTS
+# ─────────────────────────────────────────────
+
 class RestaurantViewSet(viewsets.ModelViewSet):
-    # On récupère uniquement les restaurants actifs pour le catalogue
-    queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
-    # L'admin voit tout, les clients ne voient que les restaurants actifs
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get_queryset(self):
         if self.request.user.is_authenticated and getattr(self.request.user, 'role', '') == 'admin':
             return Restaurant.objects.all()
         return Restaurant.objects.filter(is_active=True)
 
-    # IsAuthenticatedOrReadOnly : Lecture (GET) pour tout le monde,
-    # Écriture (POST, PUT, DELETE) uniquement pour les connectés (et on pourrait restreindre aux admins plus tard)
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
     @action(detail=False, methods=['get'])
     def categories(self, request):
-        # Va chercher tous les types de cuisine, retire les doublons (distinct)
         cuisines = Restaurant.objects.values_list('type_cuisine', flat=True).distinct()
-        # Retire les valeurs nulles ou vides par sécurité
-        cuisines_propres = [c for c in cuisines if c]
-        return Response(cuisines_propres)
+        return Response([c for c in cuisines if c])
 
     @action(detail=True, methods=['post'])
     def ajouter_avis(self, request, pk=None):
         restaurant = self.get_object()
-        # On passe les données du Front-End au Serializer
         serializer = AvisSerializer(data=request.data)
         if serializer.is_valid():
-            # On enregistre l'avis en forçant l'utilisateur connecté et le restaurant actuel
             serializer.save(user=request.user, restaurant=restaurant)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ─────────────────────────────────────────────
+# PLATS
+# ─────────────────────────────────────────────
 
 class PlatViewSet(viewsets.ModelViewSet):
-    queryset = Plat.objects.all()
     serializer_class = PlatSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    # ON REMPLACE L'ATTRIBUT STATIQUE 'queryset' PAR UNE FONCTION DYNAMIQUE
     def get_queryset(self):
-        # Si l'utilisateur qui fait la requête est connecté ET que son rôle est 'admin'
         if self.request.user.is_authenticated and getattr(self.request.user, 'role', '') == 'admin':
-            return Plat.objects.all() # L'admin voit TOUT (disponible ou non)
-            
-        # Pour les clients normaux et les visiteurs non connectés
+            return Plat.objects.all()
         return Plat.objects.filter(is_available=True)
 
-    @action(detail=False, methods=['get']) # 2. <-- LE SYMBOLE "@" MANQUANT EST ICI !
+    @action(detail=False, methods=['get'])
     def top_ventes(self, request):
-        top_plats = Plat.objects.filter(is_available=True).annotate(
-            total_vendu=Coalesce(Sum('commande_items__quantite'), 0)
-        ).order_by('-total_vendu', '-id')[:4]
-
-        if not top_plats or top_plats[0].total_vendu == 0:
-            top_plats = Plat.objects.filter(is_available=True).order_by('-id')[:4]
-
+        # La requête complexe (annotate/order_by) est dans PlatManager.top_ventes()
+        top_plats = Plat.objects.top_ventes(limit=4)
         serializer = self.get_serializer(top_plats, many=True)
         return Response(serializer.data)

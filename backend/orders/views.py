@@ -1,74 +1,45 @@
-from django.shortcuts import render
+"""
+orders/views.py
+---------------
+Vues "Skinny" : rôle strictement HTTP.
+La logique de notification est déléguée à orders/services.py.
+Le filtrage ORM est délégué à CommandeManager (orders/models.py).
+"""
 
-# Create your views here.
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated # <--- Import crucial
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Commande, CommandeItem
 from .serializers import CommandeSerializer, CommandeItemSerializer
-from accounts.models import Utilisateur
-from catalog.models import Notification
+from .services import notify_new_order, notify_status_change
+
 
 class CommandeViewSet(viewsets.ModelViewSet):
-    queryset = Commande.objects.all()
-    serializer_class = CommandeSerializer
+    serializer_class   = CommandeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Sécurité supplémentaire : Un client ne doit voir QUE ses propres commandes.
-        # Si c'est un admin, il peut tout voir (ou filtrer par utilisateur).
         user = self.request.user
         if not user.is_authenticated:
             return Commande.objects.none()
 
-        # On vérifie si l'attribut role existe (cas d'un Custom User Model)
-        role = getattr(user, 'role', None)
-        if role == 'admin':
-            # Si le paramètre ?user=<id> est fourni, on filtre par cet utilisateur
+        if getattr(user, 'role', None) == 'admin':
             user_id = self.request.query_params.get('user')
-            if user_id:
-                return Commande.objects.filter(user__id=user_id)
-            return Commande.objects.all()
-        return Commande.objects.filter(user=user)
+            return Commande.objects.for_admin(user_id=user_id)
+
+        return Commande.objects.for_user(user)
 
     def perform_create(self, serializer):
         commande = serializer.save(user=self.request.user)
-        
-        # 1. Notification pour l'ADMIN : Nouvelle commande à traiter
-        admins = Utilisateur.objects.filter(role='admin')
-        for admin in admins:
-            Notification.objects.create(
-                user=admin,
-                titre="Nouvelle commande !",
-                description=f"Commande #{commande.id} reçue de {self.request.user.nom}",
-                url_redirection="/admin/orders"
-            )
-
-        # 2. Notification pour le CLIENT : Confirmation de commande
-        Notification.objects.create(
-            user=self.request.user,
-            titre="Commande confirmée",
-            description=f"Votre commande #{commande.id} a été enregistrée avec succès.",
-            url_redirection="/orderhistory"
-        )
+        notify_new_order(commande, self.request.user)
 
     def perform_update(self, serializer):
-        # On récupère l'ancienne valeur du statut avant sauvegarde
-        instance = self.get_object()
-        ancien_statut = instance.statut_livraison
-        
-        # Sauvegarde de la modification
+        ancien_statut = self.get_object().statut_livraison
         commande = serializer.save()
-        nouveau_statut = commande.statut_livraison
+        if ancien_statut != commande.statut_livraison:
+            notify_status_change(commande)
 
-        # Si le statut a changé, on notifie le client
-        if ancien_statut != nouveau_statut:
-            Notification.objects.create(
-                user=commande.user,
-                titre="Mise à jour de votre commande",
-                description=f"Votre commande #{commande.id} est maintenant : {commande.get_statut_livraison_display()}",
-                url_redirection="/orderhistory"
-            )
 
 class CommandeItemViewSet(viewsets.ModelViewSet):
-    queryset = CommandeItem.objects.all()
-    serializer_class = CommandeItemSerializer
+    queryset           = CommandeItem.objects.all()
+    serializer_class   = CommandeItemSerializer

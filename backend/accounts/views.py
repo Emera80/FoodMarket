@@ -29,14 +29,12 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        # Un utilisateur normal ne peut voir que son propre profil
-        # Un admin peut voir tout le monde
         user = self.request.user
-        if getattr(user, 'role', '') == 'admin':  # Utilisation sécurisée si user est AnonymousUser
-            return Utilisateur.objects.all()
+        if getattr(user, 'role', '') == 'admin':
+            return Utilisateur.objects.with_stats()
         if user.is_authenticated:
-            return Utilisateur.objects.filter(id=user.id)
-        return Utilisateur.objects.none()  # Renvoie vide si non connecté
+            return Utilisateur.objects.with_stats().filter(id=user.id)
+        return Utilisateur.objects.none()
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])

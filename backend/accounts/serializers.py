@@ -34,14 +34,16 @@ class UtilisateurSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
-    # --- CALCUL DU NOMBRE DE COMMANDES ---
     def get_nombre_commandes(self, obj):
-        # On compte combien de commandes sont associées à cet utilisateur
-        return obj.commandes.count()
+        # Utilise l'annotation du manager (with_stats) si disponible — évite N+1
+        val = getattr(obj, 'nombre_commandes', None)
+        return val if val is not None else obj.commandes.count()
 
-    # --- CALCUL DU TOTAL DÉPENSÉ ---
     def get_total_depense(self, obj):
-        # On additionne le champ 'total' de toutes ses commandes
+        # Utilise l'annotation du manager (with_stats) si disponible — évite N+1
+        val = getattr(obj, 'total_depense', None)
+        if val is not None:
+            return val
         total = obj.commandes.aggregate(total_sum=Sum('total'))['total_sum']
         return total if total is not None else 0.000
 
