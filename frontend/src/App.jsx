@@ -34,6 +34,7 @@ import EditRestaurant from "./pages/AdminSide/EditRestaurant";
 import AdminUsers from "./pages/AdminSide/AdminUsers";
 import AdminSettings from "./pages/AdminSide/AdminSettings";
 import AdminMessages from "./pages/AdminSide/AdminMessages";
+import AdminNotifications from "./pages/AdminSide/AdminNotifications";
 
 
 // 1. CRÉATION DU LAYOUT CLIENT
@@ -109,6 +110,7 @@ function App() {
 					<Route path="dish/add" element={<CreatePlat />} />
 					<Route path="settings" element={<AdminSettings />} />
 					<Route path="messages" element={<AdminMessages />} />
+				<Route path="notifications" element={<AdminNotifications />} />
 				</Route>
 				
 				<Route path="*" element={<div className="flex items-center justify-center h-screen font-black text-4xl">404 - Page non trouvée</div>} />

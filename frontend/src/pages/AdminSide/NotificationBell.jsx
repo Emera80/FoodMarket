@@ -15,6 +15,8 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const userRole = localStorage.getItem('user_role');
+  const notificationsPath = userRole === 'admin' ? '/admin/notifications' : null;
 
   // --- 1. USE-EFFECT CLASSIQUE (HTTP) ---
   // Chargement de l'historique des notifications au démarrage
@@ -227,30 +229,43 @@ export default function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute right-0 mt-3 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
+            className="fixed top-[72px] inset-x-3 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-96 bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-100 z-[100] overflow-hidden"
           >
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-gray-900">Notifications</h3>
-                <p className="text-sm font-bold text-gray-400 mt-1">Vous avez {unreadCount} notifications non lues</p>
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 leading-tight">Notifications</h3>
+                <p className="text-xs font-bold text-gray-400 mt-0.5">
+                  {unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}` : 'Tout est lu'}
+                </p>
               </div>
-              <div className='flex items-center gap-2'>
-                  <button onClick={markAllAsRead} className='p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50' title='Tout marquer comme lu'>
-                      <CheckCircle2 size={18}/>
+              <div className='flex items-center gap-1 shrink-0'>
+                  <button onClick={markAllAsRead} className='p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50' title='Tout marquer comme lu'>
+                      <CheckCircle2 size={16}/>
                   </button>
-                  <button onClick={() => setIsOpen(false)} className='p-2 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100'>
-                      <X size={18}/>
+                  {notificationsPath && (
+                    <button
+                      onClick={() => { setIsOpen(false); navigate(notificationsPath); }}
+                      className='p-1.5 text-gray-400 hover:text-orange-600 rounded-lg hover:bg-orange-50'
+                      title='Voir toutes les notifications'
+                    >
+                      <Bell size={16}/>
+                    </button>
+                  )}
+                  <button onClick={() => setIsOpen(false)} className='p-1.5 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100'>
+                      <X size={16}/>
                   </button>
               </div>
             </div>
 
-            <div className="max-h-[450px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-100">
+            {/* Liste */}
+            <div className="max-h-[55vh] sm:max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-100">
               {loading ? (
-                <div className="p-10 text-center text-sm font-bold text-gray-400">Chargement...</div>
+                <div className="p-8 text-center text-sm font-bold text-gray-400">Chargement...</div>
               ) : notifications.length === 0 ? (
-                <div className="p-10 text-center">
-                    <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4'>
-                        <Bell size={32}/>
+                <div className="p-8 text-center">
+                    <div className='w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-3'>
+                        <Bell size={24}/>
                     </div>
                     <p className="text-sm font-bold text-gray-500">Aucune notification pour le moment.</p>
                 </div>
@@ -259,49 +274,48 @@ export default function NotificationBell() {
                   <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
-                    className={`p-6 border-b border-gray-100 flex items-start gap-4 hover:bg-gray-50 cursor-pointer transition-colors relative group ${!n.est_lu ? 'bg-orange-50/50' : ''}`}
+                    className={`p-3 sm:p-4 border-b border-gray-100 flex items-start gap-3 hover:bg-gray-50 cursor-pointer transition-colors relative group ${!n.est_lu ? 'bg-orange-50/50' : ''}`}
                   >
                     {!n.est_lu && (
                         <div className='absolute left-0 top-0 bottom-0 w-1 bg-orange-500'></div>
                     )}
 
-                    <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${
+                    <div className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${
                       n.type === 'COMMANDE' ? 'bg-blue-100 text-blue-600' :
                       n.type === 'MESSAGE' ? 'bg-orange-100 text-orange-600' :
                       'bg-gray-100 text-gray-600'
                     }`}>
-                      {/* Icône basée sur le type ou l'avatar utilisateur */}
                       {n.utilisateur_details?.avatar ? (
-                          <img src={normalizeUrl(n.utilisateur_details.avatar)} alt="User" className='w-8 h-8 rounded-full object-cover'/>
+                          <img src={normalizeUrl(n.utilisateur_details.avatar)} alt="User" className='w-7 h-7 rounded-full object-cover'/>
                       ) : (
-                          <Bell size={20} />
+                          <Bell size={16} />
                       )}
                     </div>
 
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-black text-gray-900 leading-snug">{n.titre}</p>
-                      <p className="text-sm font-bold text-gray-600 line-clamp-2">{n.description}</p>
-                      <p className="text-[10px] font-bold text-gray-400 pt-1 flex items-center gap-1.5">
+                    <div className="flex-1 min-w-0 space-y-0.5 pr-6">
+                      <p className="text-xs sm:text-sm font-black text-gray-900 leading-snug truncate">{n.titre}</p>
+                      <p className="text-xs font-medium text-gray-500 line-clamp-2">{n.description}</p>
+                      <p className="text-[10px] font-bold text-gray-400 pt-0.5">
                         {n.created_at && formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: fr })}
-                        {n.utilisateur_details && `• par ${n.utilisateur_details.nom}`}
+                        {n.utilisateur_details && ` • par ${n.utilisateur_details.nom}`}
                       </p>
                     </div>
 
                     <button
                       onClick={(e) => deleteNotification(e, n.id)}
-                      className="opacity-0 group-hover:opacity-100 absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-all p-1.5 bg-white rounded-lg shadow-sm border border-gray-100" title='Supprimer'
+                      className="opacity-0 group-hover:opacity-100 absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-all p-1 bg-white rounded-lg shadow-sm border border-gray-100" title='Supprimer'
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 ))
               )}
             </div>
 
-            {notifications.length > 5 && (
+            {notifications.length > 5 && notificationsPath && (
               <div className="p-4 bg-gray-50 text-center">
                 <button
-                  onClick={() => navigate('/admin/notifications')}
+                  onClick={() => { setIsOpen(false); navigate(notificationsPath); }}
                   className="text-sm font-black text-orange-600 hover:text-orange-700"
                 >
                   Voir toutes les notifications

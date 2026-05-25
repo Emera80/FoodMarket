@@ -180,21 +180,21 @@ export default function RestaurantDetailPage() {
 								))}
 							</div>
 
-							<div className="space-y-8">
+							<div className="space-y-6">
 								{filteredPlats.map((plat) => (
-									<div key={plat.id} className="flex items-center gap-6 group border-b border-gray-50 pb-6 last:border-0">
-										<div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gray-50 overflow-hidden shrink-0 shadow-sm border border-gray-100">
+									<div key={plat.id} className="flex items-start sm:items-center gap-4 group border-b border-gray-50 pb-6 last:border-0">
+										<div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-gray-50 overflow-hidden shrink-0 shadow-sm border border-gray-100">
 											<img src={plat.image} alt={plat.nom} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
 										</div>
-										<div className="flex-1">
-											<h3 className="text-xl font-black text-gray-900 mb-1">{plat.nom}</h3>
-											<p className="text-gray-500 text-sm line-clamp-2 pr-4 font-medium">{plat.description}</p>
-										</div>
-										<div className="flex items-center gap-8">
-											<span className="text-xl font-black text-gray-900 whitespace-nowrap">{parseFloat(plat.prix).toFixed(3)} DT</span>
-											<button onClick={() => addToCart(plat)} className="px-8 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl shadow-lg shadow-orange-100 transition-all active:scale-95">
-												Ajouter
-											</button>
+										<div className="flex-1 min-w-0">
+											<h3 className="text-base sm:text-xl font-black text-gray-900 mb-1">{plat.nom}</h3>
+											<p className="text-gray-500 text-sm line-clamp-2 font-medium mb-3">{plat.description}</p>
+											<div className="flex items-center justify-between gap-4">
+												<span className="text-lg sm:text-xl font-black text-gray-900 whitespace-nowrap">{parseFloat(plat.prix).toFixed(3)} DT</span>
+												<button onClick={() => addToCart(plat)} className="px-4 sm:px-8 py-2.5 sm:py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl shadow-lg shadow-orange-100 transition-all active:scale-95 text-sm sm:text-base whitespace-nowrap">
+													Ajouter
+												</button>
+											</div>
 										</div>
 									</div>
 								))}

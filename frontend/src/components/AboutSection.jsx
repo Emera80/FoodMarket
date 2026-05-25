@@ -45,18 +45,18 @@ export default function AboutSection() {
   });
 
   return (
-    <section className="my-20 mx-[10px] bg-black rounded-[2.5rem] py-20 px-6 md:px-16 lg:px-24 overflow-hidden shadow-2xl relative">
+    <section className="mt-12 sm:mt-20 mb-0 mx-3 sm:mx-[10px] bg-black rounded-2xl sm:rounded-[2.5rem] py-12 sm:py-16 lg:py-20 px-5 sm:px-10 md:px-16 lg:px-24 overflow-hidden shadow-2xl relative">
       
       {/* En-tête de la section */}
-      <div className="text-center max-w-2xl mx-auto mb-20 relative z-20">
-        <h2 className="text-4xl md:text-5xl font-bold text-orange-500 mb-6">À propos de Food Market</h2>
-        <p className="text-gray-300 text-lg">
+      <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16 relative z-20">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-orange-500 mb-4 sm:mb-6">À propos de Food Market</h2>
+        <p className="text-gray-300 text-sm sm:text-base md:text-lg">
           Plus qu'une simple plateforme de livraison, nous sommes passionnés par la bonne nourriture et les moments partagés.
         </p>
       </div>
 
       {/* Conteneur principal (avec la ref pour suivre le scroll) */}
-      <div ref={containerRef} className="relative flex flex-col gap-24 max-w-6xl mx-auto py-10">
+      <div ref={containerRef} className="relative flex flex-col gap-14 sm:gap-20 lg:gap-24 max-w-6xl mx-auto py-6 sm:py-10">
         
         {/* --- LA LIGNE DE TEMPS ANIMÉE (Visible uniquement sur PC/Tablette) --- */}
         {/* Ligne de fond (Grise foncée) */}
@@ -88,7 +88,7 @@ export default function AboutSection() {
                 transition={{ duration: 0.7, ease: "easeOut" }}
               >
                 {/* L'image au premier plan (z-10) */}
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[400px] z-10 border border-zinc-800">
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[220px] sm:h-[300px] lg:h-[400px] z-10 border border-zinc-800">
                   <img 
                     src={feature.image} 
                     alt={feature.title} 

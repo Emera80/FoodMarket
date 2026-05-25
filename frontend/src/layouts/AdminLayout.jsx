@@ -1,19 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, ShoppingBag, Utensils, Users, 
-  Settings, LogOut, Search, Menu, X, 
-  Store, Home, MessageSquare // <-- Ajout de MessageSquare ici !
+import {
+  LayoutDashboard, ShoppingBag, Utensils, Users,
+  Settings, LogOut, Menu, X,
+  Store, Home, MessageSquare, MonitorSmartphone
 } from 'lucide-react';
 
-// Import de notre nouveau composant de notifications
-// (Ajuste le chemin selon l'emplacement exact de ton composant dans tes dossiers)
-import NotificationBell from '../pages/AdminSide/NotificationBell'; 
+import NotificationBell from '../pages/AdminSide/NotificationBell';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+
+  // Sur tablette (md), la sidebar est fermée par défaut ; sur desktop (lg+), elle est ouverte.
+  const [isSidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const menuItems = [
     { name: 'Tableau de bord', path: '/admin', icon: <LayoutDashboard size={20} /> },
@@ -32,7 +44,27 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <>
+      {/* --- MOBILE BLOCKER (< 768px) --- */}
+      <div className="flex md:hidden min-h-screen bg-gray-950 items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="w-20 h-20 bg-orange-500/10 rounded-2xl flex items-center justify-center">
+            <MonitorSmartphone size={40} className="text-orange-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-white font-black text-2xl">Accès restreint</h2>
+            <p className="text-gray-400 font-medium leading-relaxed max-w-xs">
+              L'espace administrateur nécessite au minimum une <span className="text-orange-400 font-bold">tablette</span> ou un ordinateur pour être utilisé.
+            </p>
+          </div>
+          <div className="px-4 py-2 bg-gray-800 rounded-xl border border-gray-700">
+            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Résolution minimale : 768px</p>
+          </div>
+        </div>
+      </div>
+
+      {/* --- LAYOUT ADMIN (>= 768px) --- */}
+    <div className="hidden md:flex min-h-screen bg-gray-50">
       
       {/* --- SIDEBAR --- */}
       <aside className={`bg-gray-900 text-white transition-all duration-300 flex flex-col ${isSidebarOpen ? 'w-72' : 'w-20'} fixed h-full z-50`}>
@@ -84,23 +116,24 @@ export default function AdminLayout() {
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-72' : 'ml-20'}`}>
         
         {/* Topbar Interne */}
-        <header className="bg-white border-b border-gray-200 h-20 flex items-center justify-end px-8 sticky top-0 z-40">
-          {/*<><div className="flex items-center gap-4 bg-gray-100 px-4 py-2 rounded-xl w-96">*/}
-          {/*  <Search size={18} className="text-gray-400" />*/}
-          {/*  <input type="text" placeholder="Rechercher une commande..." className="bg-transparent border-none outline-none text-sm w-full font-medium" />*/}
-          {/*</div></>*/}
-          
-          <div className="flex items-center gap-6">
-            
-            {/* === INTÉGRATION DE LA NOUVELLE CLOCHE === */}
+        <header className="bg-white border-b border-gray-200 h-16 md:h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+          {/* Bouton hamburger visible sur tablette (sidebar fermée) */}
+          <button
+            onClick={() => setSidebarOpen(!isSidebarOpen)}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors lg:hidden"
+          >
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="hidden lg:block" />
+
+          <div className="flex items-center gap-4 md:gap-6">
             <NotificationBell />
-            
-            <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
-              <div className="text-right hidden sm:block">
+            <div className="flex items-center gap-3 pl-4 md:pl-6 border-l border-gray-200">
+              <div className="text-right hidden md:block">
                 <p className="text-sm font-black text-gray-900 leading-none">Administrateur</p>
                 <p className="text-[10px] font-bold text-orange-600 uppercase mt-1">Super Admin</p>
               </div>
-              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 font-black">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 font-black">
                 A
               </div>
             </div>
@@ -108,10 +141,11 @@ export default function AdminLayout() {
         </header>
 
         {/* C'est ici que les pages admin s'afficheront */}
-        <div className="p-8">
+        <div className="p-4 md:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>
     </div>
+    </>
   );
 }

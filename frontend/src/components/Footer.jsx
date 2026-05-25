@@ -7,27 +7,23 @@ import { Link } from 'react-router-dom';
 export default function Footer() {
   return (
     // On garde la marge de 20px et on arrondit seulement le haut (rounded-t-[2.5rem])
-    <footer className="bg-black rounded-t-[2.5rem] mt-20 mx-[20px] pt-16 pb-8 px-10 md:px-16 lg:px-20">
-      
-      {/* Conteneur pour limiter la largeur du contenu à l'intérieur du grand fond noir */}
+    <footer className="bg-black rounded-t-2xl sm:rounded-t-[2.5rem] mt-0 mx-3 sm:mx-[20px] pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 px-5 sm:px-10 md:px-14 lg:px-20">
+
       <div className="max-w-7xl mx-auto">
-        
-        {/* --- GRILLE PRINCIPALE (4 Colonnes) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
+
+        {/* --- GRILLE PRINCIPALE --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-8 mb-10 sm:mb-14 lg:mb-16">
 
           {/* Colonne 1 : Marque & Réseaux Sociaux */}
-          <div className="flex flex-col gap-6">
-            
-            {/* Faux Logo avec l'icône Utensils */}
+          <div className="flex flex-col gap-4 sm:gap-6 sm:col-span-2 lg:col-span-1">
+
             <div className="flex items-center gap-3 text-white">
-              <Link to="/" className="flex items-center gap-3">
-                <div >
-                  <img src={logoImg} className='w-16' alt="logo" />
-                </div>
-                <h2 className='logoText text-3xl font-bold flex'>F<span className='text-orange-500 font-bold mt-1 '><Cherry size={30} /></span>d Market</h2>
+              <Link to="/" className="flex items-center gap-2">
+                <img src={logoImg} className='w-10 sm:w-12' alt="logo" />
+                <h2 className='logoText text-xl sm:text-2xl font-bold flex'>F<span className='text-orange-500 font-bold mt-0.5'><Cherry size={22} /></span>d Market</h2>
               </Link>
             </div>
-            
+
             <p className="text-gray-400 text-sm leading-relaxed">
               Vos plats préférés livrés chez vous en un clic. Découvrez le meilleur de la gastronomie locale, chaud et rapidement.
             </p>
@@ -45,7 +41,7 @@ export default function Footer() {
 
           {/* Colonne 2 : Liens Rapides */}
           <div>
-            <h4 className="text-white font-bold text-lg mb-6">Liens Rapides</h4>
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Liens Rapides</h4>
             <ul className="flex flex-col gap-4">
               <li><Link to="/" className="text-gray-400 hover:text-[#FF6B00] transition-colors font-medium">Accueil</Link></li>
               <li><Link to="/#categories" className="text-gray-400 hover:text-[#FF6B00] transition-colors font-medium">Nos Catégories</Link></li>
@@ -56,7 +52,7 @@ export default function Footer() {
 
           {/* Colonne 3 : Légal */}
           <div>
-            <h4 className="text-white font-bold text-lg mb-6">Informations</h4>
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Informations</h4>
             <ul className="flex flex-col gap-4">
               <li><Link to="/" className="text-gray-400 hover:text-[#FF6B00] transition-colors font-medium">Devenir Partenaire</Link></li>
               <li><Link to="/" className="text-gray-400 hover:text-[#FF6B00] transition-colors font-medium">Mentions Légales</Link></li>
@@ -66,8 +62,8 @@ export default function Footer() {
           </div>
 
           {/* Colonne 4 : Newsletter */}
-          <div>
-            <h4 className="text-white font-bold text-lg mb-6">Newsletter</h4>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Newsletter</h4>
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">
               Abonnez-vous pour recevoir des codes promo exclusifs et nos nouveautés !
             </p>
@@ -75,12 +71,11 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Votre adresse email"
-                // Champ adapté au Dark Mode : fond sombre, bordure discrète
-                className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-[#FF6B00] transition-colors w-full"
+                className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-[#FF6B00] transition-colors w-full text-sm"
               />
               <button
                 type="submit"
-                className="bg-[#FF6B00] hover:bg-[#e66000] text-white font-bold py-3 rounded-xl transition-colors w-full shadow-lg shadow-orange-500/20"
+                className="bg-[#FF6B00] hover:bg-[#e66000] text-white font-bold py-3 rounded-xl transition-colors w-full shadow-lg shadow-orange-500/20 text-sm"
               >
                 S'abonner
               </button>
@@ -90,11 +85,11 @@ export default function Footer() {
         </div>
 
         {/* --- BARRE DU BAS (Copyright) --- */}
-        <div className="pt-8 border-t border-zinc-800/80 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-zinc-500 text-sm font-medium">
+        <div className="pt-6 sm:pt-8 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-zinc-500 text-xs sm:text-sm font-medium">
             &copy; {new Date().getFullYear()} Food Market. Tous droits réservés.
           </p>
-          <div className="flex gap-6 text-sm text-zinc-500 font-medium">
+          <div className="flex gap-6 text-xs sm:text-sm text-zinc-500 font-medium">
             <span>Fait avec passion 🍕</span>
           </div>
         </div>
