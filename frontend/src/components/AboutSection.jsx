@@ -45,7 +45,7 @@ export default function AboutSection() {
   });
 
   return (
-    <section className="mt-12 sm:mt-20 mb-0 mx-3 sm:mx-[10px] bg-black rounded-2xl sm:rounded-[2.5rem] py-12 sm:py-16 lg:py-20 px-5 sm:px-10 md:px-16 lg:px-24 overflow-hidden shadow-2xl relative">
+    <section className="mt-2 sm:mt-20 mb-0 mx-4 md:mx-10 bg-black rounded-t-2xl sm:rounded-t-[2.5rem] py-12 sm:py-16 lg:py-20 px-5 sm:px-10 md:px-16 lg:px-24 overflow-hidden relative">
       
       {/* En-tête de la section */}
       <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16 relative z-20">

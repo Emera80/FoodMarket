@@ -90,8 +90,8 @@ export default function RestaurantDetailPage() {
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20">
-			{/* 1. BANNIÈRE (HERO IMAGE) */}
-			<div className="relative h-72 md:h-96 w-full">
+					{/* 1. BANNIÈRE (HERO IMAGE) */}
+			<div className="relative h-72 md:h-96 w-full overflow-hidden">
 				<img src={restaurant.image} alt="Bannière" className="w-full h-full object-cover" />
 				<div className="absolute inset-0 bg-black/20"></div>
 				<div className="absolute top-6 left-6 right-6 flex justify-between items-center z-30 max-w-6xl mx-auto">
@@ -106,8 +106,8 @@ export default function RestaurantDetailPage() {
 
 			{/* 2. CARTE D'INFORMATION (OVERLAP) */}
 			<div className="relative -mt-20 z-40 max-w-6xl mx-auto px-4">
-				<div className="bg-white rounded-[32px] shadow-xl border border-gray-100 p-8">
-					<div className="flex flex-col md:flex-row gap-8 items-start">
+				<div className="bg-white rounded-[32px] shadow-xl border border-gray-100 p-4 md:p-8">
+					<div className="flex flex-col md:flex-row gap-8 items-start relative">
 						{/* Logo circulaire */}
 						<div className="w-28 h-28 rounded-full border-[6px] border-white shadow-lg overflow-hidden shrink-0 bg-gray-100 -mt-20 md:-mt-24">
 							<img src={restaurant.image} alt="Logo" className="w-full h-full object-cover" />
@@ -145,7 +145,7 @@ export default function RestaurantDetailPage() {
 					</div>
 
 					{/* ONGLETS */}
-					<div className="flex border-b border-gray-100 mt-10 gap-12">
+					<div className="flex border-b border-gray-100 mt-10 gap-6 md:gap-12 overflow-x-auto scrollbar-hide">
 						{[
 							{ id: "Menu", icon: <Utensils size={18} /> },
 							{ id: "Avis", icon: <MessageSquare size={18} /> },
@@ -168,7 +168,7 @@ export default function RestaurantDetailPage() {
 				<div className="mt-8">
 					{/* ================= ONGLET : MENU ================= */}
 					{activeTab === "Menu" && (
-						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 animate-fadeIn">
+						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-4 md:p-8 animate-fadeIn">
 							<div className="flex gap-3 overflow-x-auto pb-6 mb-8 scrollbar-hide">
 								{categories.map((cat) => (
 									<button key={cat} onClick={() => setActiveCategory(cat)}
@@ -210,7 +210,7 @@ export default function RestaurantDetailPage() {
 
 					{/* ================= ONGLET : AVIS ================= */}
 					{activeTab === "Avis" && (
-						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 animate-fadeIn space-y-10">
+						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-4 md:p-8 animate-fadeIn space-y-10">
                             
                             {/* FORMULAIRE D'AJOUT D'AVIS */}
                             <div className="bg-orange-50/50 p-6 rounded-3xl border border-orange-100">
@@ -227,14 +227,14 @@ export default function RestaurantDetailPage() {
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-col sm:flex-row gap-4">
                                             <textarea 
                                                 value={newReview.commentaire}
                                                 onChange={(e) => setNewReview({...newReview, commentaire: e.target.value})}
                                                 placeholder="Partagez votre expérience..." 
                                                 className="flex-1 bg-white border border-gray-200 rounded-2xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500 resize-none h-24"
                                             ></textarea>
-                                            <button disabled={isSubmitting} type="submit" className="bg-gray-900 hover:bg-black text-white px-6 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-colors w-32 disabled:opacity-50">
+                                            <button disabled={isSubmitting} type="submit" className="bg-gray-900 hover:bg-black text-white px-6 py-4 sm:py-0 rounded-2xl font-bold flex flex-row sm:flex-col items-center justify-center gap-2 transition-colors w-full sm:w-32 disabled:opacity-50">
                                                 <Send size={20} />
                                                 <span className="text-xs uppercase tracking-widest">{isSubmitting ? "Envoi..." : "Publier"}</span>
                                             </button>
@@ -284,7 +284,7 @@ export default function RestaurantDetailPage() {
 
 					{/* ================= ONGLET : INFOS ================= */}
 					{activeTab === "Infos" && (
-						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 animate-fadeIn">
+						<div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-4 md:p-8 animate-fadeIn">
                             <h3 className="text-xl font-black text-gray-900 mb-6">À propos de {restaurant.nom}</h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

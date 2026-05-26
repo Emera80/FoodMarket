@@ -6,20 +6,46 @@ import { fr } from "date-fns/locale/fr";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-const API_BASE_URL = 'http://127.0.0.1:8000'; // centralisation de l'URL pour le WS
 
+/** 
+ * URL de base pour les communications temps réel (WebSocket).
+ * Centralisée pour faciliter le passage en production.
+ */
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+/**
+ * Composant NotificationBell - Gestionnaire de notifications temps réel.
+ * 
+ * Ce composant remplit trois rôles majeurs :
+ * 1. Pôle de réception (WebSocket) : Écoute les alertes poussées par Django Channels.
+ * 2. Historique (HTTP) : Permet de consulter et marquer comme lues les notifications passées.
+ * 3. Routeur intelligent : Redirige l'utilisateur vers la ressource concernée au clic.
+ * 
+ * 👉 Voir l'architecture globale dans README.md, section "Architecture des Notifications Temps Réel".
+ */
 export default function NotificationBell() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // --- ÉTATS LOCAUX ---
+  /** @type {Array} Liste des notifications à afficher. */
   const [notifications, setNotifications] = useState([]);
+  /** @type {number} Nombre de pastilles rouges à afficher sur la cloche. */
   const [unreadCount, setUnreadCount] = useState(0);
+  /** @type {boolean} État d'ouverture du panneau latéral (Pop-over). */
   const [isOpen, setIsOpen] = useState(false);
+  /** @type {boolean} Indicateur de chargement initial. */
   const [loading, setLoading] = useState(true);
+
+  /** Détermination dynamique des accès selon le rôle utilisateur. */
   const userRole = localStorage.getItem('user_role');
   const notificationsPath = userRole === 'admin' ? '/admin/notifications' : null;
 
-  // --- 1. USE-EFFECT CLASSIQUE (HTTP) ---
-  // Chargement de l'historique des notifications au démarrage
+  // --- 1. SYNCHRONISATION INITIALE (HTTP) ---
+  /**
+   * Récupère l'historique complet des notifications via l'API REST classique.
+   * S'exécute une seule fois au montage du composant.
+   */
   useEffect(() => {
     const fetchNotifications = async () => {
       setLoading(true);
@@ -27,26 +53,20 @@ export default function NotificationBell() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        const response = await axios.get('http://127.0.0.1:8000/api/catalog/notifications/', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        const response = await axios.get(`${API_BASE_URL}/api/catalog/notifications/`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        // On s'assure d'avoir un tableau et on trie par date décroissante
+        // Normalisation de la réponse (gère les formats paginés ou bruts).
         const notifs = Array.isArray(response.data) ? response.data : (response.data.results || []);
 
-        const sortedNotifs = notifs.sort((a, b) =>
-          new Date(b.created_at) - new Date(a.created_at)
-        );
+        // Tri chronologique : Les plus récentes en premier.
+        const sortedNotifs = notifs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         setNotifications(sortedNotifs);
-
-        // Comptage des non lues
-        const count = sortedNotifs.filter(n => !n.est_lu).length;
-        setUnreadCount(count);
+        setUnreadCount(sortedNotifs.filter(n => !n.est_lu).length);
       } catch (error) {
-        console.error('Erreur notifications:', error);
+        console.error('Erreur lors de la récupération des notifications:', error);
       } finally {
         setLoading(false);
       }
@@ -55,53 +75,59 @@ export default function NotificationBell() {
     fetchNotifications();
   }, []);
 
-  // ============================================================
-  // --- 2. 🚨 NOUEAU USE-EFFECT TEMPS RÉEL (WEBSOCKETS) 🚨 ---
-  // Connexion au salon de notifications admin de Django Channels
-  // ============================================================
+  // --- 2. GESTION DU TEMPS RÉEL (WEBSOCKETS) ---
+  /**
+   * Établit et maintient une connexion persistante pour recevoir des alertes "Push".
+   */
   useEffect(() => {
-    // A. On ne se connecte que si l'utilisateur a un token (est connecté)
     const token = localStorage.getItem('access_token');
+    const userId = localStorage.getItem('user_id');
     if (!token) return;
 
-    // B. Définition de l'URL WebSocket (on remplace http:// par ws://)
-    const wsUrl = `ws://127.0.0.1:8000/ws/admin-notifications/`;
+    // Connexion au salon de diffusion Django Channels.
+    // L'identifiant utilisateur est passé pour le routage ciblé côté serveur.
+    const wsUrl = `ws://127.0.0.1:8000/ws/admin-notifications/?user_id=${userId || ''}`;
     const ws = new WebSocket(wsUrl);
 
-    // C. Événement : Connexion établie avec succès
-    ws.onopen = () => {
-      console.log('✅ NotificationBell: Connecté au flux temps réel (WebSocket)');
-    };
+    ws.onopen = () => console.log('✅ Bus de notifications connecté.');
 
-    // D. Événement : Réception d'un message depuis le serveur Django
-    // D. Événement : Réception d'un message depuis le serveur Django
+    /**
+     * Traitement des messages entrants.
+     * Chaque message reçu déclenche un Toast visuel et met à jour la liste locale.
+     */
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
 
         if (data.type === 'nouvelle_notification') {
           const payload = data.payload;
-          console.log('🔔 Nouvelle notification reçue en temps réel:', payload);
 
-          // --- AJOUT DU TOAST ICI ---
-          toast.success(`Nouveau message : ${payload.titre}`, {
+          // Feedback visuel immédiat (Toast).
+          toast.success(payload.titre, {
             duration: 5000,
             position: 'top-right',
             icon: '🔔',
           });
-          // --------------------------
 
-          const newNotifForUI = {
-            id: `ws-${Date.now()}`,
+          // Normalisation de l'URL cible selon le rôle (Routage intelligent).
+          let redirectUrl = payload.url_redirection || '/';
+          if (redirectUrl.includes('order') && localStorage.getItem('user_role') !== 'admin') {
+            redirectUrl = '/orderhistory';
+          }
+
+          // Création de l'objet de notification pour le state React.
+          const newNotif = {
+            id: payload.id || `ws-${Date.now()}`,
             titre: payload.titre,
             description: payload.description,
-            created_at: new Date().toISOString(),
+            created_at: payload.created_at || new Date().toISOString(),
             est_lu: false,
-            type: 'MESSAGE',
-            url_redirection: payload.id_message ? '/admin/messages' : '/'
+            // Détection automatique du type pour l'icône/couleur.
+            type: (redirectUrl.toLowerCase().includes('order') || payload.titre?.toLowerCase().includes('commande')) ? 'COMMANDE' : 'MESSAGE',
+            url_redirection: redirectUrl
           };
 
-          setNotifications(prevNotifs => [newNotifForUI, ...prevNotifs]);
+          setNotifications(prev => [newNotif, ...prev]);
           setUnreadCount(prevCount => prevCount + 1);
         }
       } catch (err) {
@@ -109,65 +135,77 @@ export default function NotificationBell() {
       }
     };
 
-    // E. Événement : Si le serveur ferme la connexion ou erreur
     ws.onclose = (event) => {
       if (event.wasClean) {
-        console.log('❌ NotificationBell: Flux temps réel déconnecté (WebSocket)');
+        console.log('❌ Bus de notifications déconnecté proprement.');
       }
-      // Connexion refusée silencieusement si le serveur n'est pas disponible
     };
 
     ws.onerror = (error) => {
-      console.error('❌ NotificationBell: Erreur WebSocket:', error);
+      console.error('❌ Erreur WebSocket:', error);
     };
 
-    // F. Fonction de nettoyage (Cleanup)
-    // Quand on quitte la page ou le composant est détruit, on "raccroche" la ligne WS
+    // Nettoyage de la socket lors du démontage du composant.
     return () => {
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close();
       }
     };
-  }, []); // [] = On se connecte une seule fois au montage du composant
+  }, []);
 
-  // ... (Reste de tes fonctions existantes inchangé) ...
-
-  const normalizeUrl = (avatar) => {
-    if (!avatar) return null;
-    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
-      return avatar;
+  /**
+   * Gère l'interaction de l'utilisateur avec une notification.
+   * 
+   * Actions :
+   * 1. Fermeture du panneau.
+   * 2. Marquage comme lu (Optimiste + API).
+   * 3. Redirection fluide via React Router (sans rechargement de page).
+   * 
+   * @param {Event} e - Événement de clic.
+   * @param {Object} notif - L'objet notification concerné.
+   */
+  const handleNotificationClick = async (e, notif) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
-    // Pour les médias locaux
-    return `http://127.0.0.1:8000${avatar}`;
-  };
 
-  const handleNotificationClick = async (notif) => {
     setIsOpen(false);
 
+    // --- MARQUAGE COMME LU ---
     if (!notif.est_lu) {
-      // Marquage comme lu en base de données (HTTP)
-      try {
-        const token = localStorage.getItem('access_token');
-        await axios.post(`http://127.0.0.1:8000/api/catalog/notifications/${notif.id}/marquer_lu/`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+      // Mise à jour locale immédiate (UX fluide).
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, est_lu: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
 
-        // Mise à jour locale du state
-        setNotifications(notifications.map(n =>
-          n.id === notif.id ? { ...n, est_lu: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      } catch (error) {
-        console.error("Erreur marquage lu:", error);
+      // Synchronisation avec le backend (silencieuse).
+      if (notif.id && !String(notif.id).startsWith('ws-')) {
+        try {
+          const token = localStorage.getItem('access_token');
+          await axios.post(`${API_BASE_URL}/api/catalog/notifications/${notif.id}/marquer_lu/`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (err) {
+          console.warn('Échec de synchronisation du statut "Lu":', err);
+        }
       }
     }
 
-    // Redirection
+    // --- ROUTAGE INTELLIGENT ---
     if (notif.url_redirection) {
-      if (location.pathname === notif.url_redirection) {
-        navigate(0); // Recharge si on y est déjà
-      } else {
-        navigate(notif.url_redirection);
+      // Normalisation des chemins pour éviter les rechargements inutiles (navigate(0)).
+      let targetPath = notif.url_redirection.toLowerCase().trim();
+      if (targetPath.includes('order') && localStorage.getItem('user_role') !== 'admin') {
+        targetPath = '/orderhistory';
+      }
+      if (targetPath.length > 1 && targetPath.endsWith('/')) targetPath = targetPath.slice(0, -1);
+
+      let currentPath = location.pathname.toLowerCase().trim();
+      if (currentPath.length > 1 && currentPath.endsWith('/')) currentPath = currentPath.slice(0, -1);
+      
+      // On ne navigue que si la destination est différente de la page actuelle.
+      if (currentPath !== targetPath) {
+        navigate(targetPath);
       }
     }
   };
@@ -273,7 +311,7 @@ export default function NotificationBell() {
                 notifications.map((n) => (
                   <div
                     key={n.id}
-                    onClick={() => handleNotificationClick(n)}
+                    onClick={(e) => handleNotificationClick(e, n)}
                     className={`p-3 sm:p-4 border-b border-gray-100 flex items-start gap-3 hover:bg-gray-50 cursor-pointer transition-colors relative group ${!n.est_lu ? 'bg-orange-50/50' : ''}`}
                   >
                     {!n.est_lu && (

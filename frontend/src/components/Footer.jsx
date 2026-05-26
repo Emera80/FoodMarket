@@ -6,8 +6,8 @@ import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    // On garde la marge de 20px et on arrondit seulement le haut (rounded-t-[2.5rem])
-    <footer className="bg-black rounded-t-2xl sm:rounded-t-[2.5rem] mt-0 mx-3 sm:mx-[20px] pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 px-5 sm:px-10 md:px-14 lg:px-20">
+    // On garde la marge de 10 et on enlève les bords arrondis
+    <footer className="bg-black rounded-none mt-0 mx-4 md:mx-10 pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 px-5 sm:px-10 md:px-14 lg:px-20 border-t border-zinc-800">
 
       <div className="max-w-7xl mx-auto">
 

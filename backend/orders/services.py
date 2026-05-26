@@ -1,55 +1,71 @@
 """
 orders/services.py
 ------------------
-Couche Service de l'application orders.
-Orchestre les notifications (admin + client) lors des événements de commande.
-Les vues (views.py) appellent ces fonctions et se limitent au rôle HTTP.
-"""
+Couche de services dédiée à la gestion du cycle de vie des commandes.
 
+Ce module orchestre les interactions complexes liées aux commandes, notamment :
+- La notification multi-destinataire lors d'une nouvelle vente.
+- Le suivi des changements de statut de livraison.
+- L'interface avec le module de notification global.
+
+L'utilisation d'une couche service ici permet de découpler la logique métier
+des vues Django, facilitant ainsi la maintenance et l'évolution du tunnel de commande.
+"""
 
 def notify_new_order(commande, user) -> None:
     """
-    Déclenche deux notifications lors de la création d'une commande :
-      - Une notification pour chaque administrateur (nouvelle commande à traiter).
-      - Une notification de confirmation pour le client.
+    Pilote l'envoi des notifications consécutives à la création d'une commande.
+
+    Cette fonction assure la communication vers deux cibles distinctes :
+    1. Administrateurs : Alerte sur l'arrivée d'une nouvelle commande à préparer.
+    2. Client : Envoi d'une confirmation de réception pour rassurer l'utilisateur.
+
+    Args:
+        commande (Commande): L'instance de la commande venant d'être créée.
+        user (Utilisateur): Le client ayant passé la commande.
     """
-    # Imports locaux pour éviter les imports circulaires
-    # (orders <-> catalog seraient circulaires si importés au module top-level)
+    # Importations locales pour éviter les dépendances circulaires entre modules.
     from catalog.models import Notification
     from accounts.models import Utilisateur
 
-    # Notification à tous les admins
+    # 1. Notification du pôle administratif.
     admins = Utilisateur.objects.filter(role='admin')
     for admin in admins:
         Notification.objects.create(
             user=admin,
             titre="Nouvelle commande !",
-            description=f"Commande #{commande.id} reçue de {user.nom}",
+            description=f"La commande #{commande.id} a été passée par {user.nom}. À traiter rapidement.",
             url_redirection="/admin/orders",
         )
 
-    # Confirmation au client
+    # 2. Notification de confirmation pour le client.
     Notification.objects.create(
         user=user,
-        titre="Commande confirmée",
-        description=f"Votre commande #{commande.id} a été enregistrée avec succès.",
+        titre="Nouvelle commande",
+        description=f"Votre commande #{commande.id} est bien enregistrée. Merci de votre confiance !",
         url_redirection="/orderhistory",
     )
 
 
 def notify_status_change(commande) -> None:
     """
-    Notifie le client quand le statut de sa commande change.
-    Appelé depuis CommandeViewSet.perform_update() après sauvegarde.
+    Informe le client de l'évolution logistique de sa commande.
+
+    Cette fonction est généralement appelée lors de la mise à jour du champ
+    `statut_livraison` par un administrateur.
+
+    Args:
+        commande (Commande): L'instance de commande dont le statut a évolué.
     """
     from catalog.models import Notification
 
+    # Création d'une notification ciblée sur le propriétaire de la commande.
     Notification.objects.create(
         user=commande.user,
         titre="Mise à jour de votre commande",
         description=(
-            f"Votre commande #{commande.id} est maintenant : "
-            f"{commande.get_statut_livraison_display()}"
+            f"Bonne nouvelle ! Votre commande #{commande.id} est maintenant : "
+            f"{commande.get_statut_livraison_display().lower()}."
         ),
         url_redirection="/orderhistory",
     )

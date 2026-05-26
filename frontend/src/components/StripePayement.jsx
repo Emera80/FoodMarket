@@ -1,45 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import api from '../services/api'; // Ajuste le chemin selon ton dossier
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
-// 🚨 Remplace ceci par TA CLÉ PUBLIQUE STRIPE (pk_test_...)
+/**
+ * Initialisation asynchrone de l'instance Stripe.
+ * Utilise la clé publique définie dans les variables d'environnement (Vite).
+ */
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-// --- LE FORMULAIRE INTERNE DE STRIPE ---
-// Dans StripePayment.jsx
+/**
+ * Composant de formulaire interne géré par Stripe.
+ * 
+ * Ce composant doit impérativement être enveloppé par un composant <Elements>
+ * pour accéder aux hooks useStripe() et useElements().
+ * 
+ * @param {Object} props
+ * @param {Function} props.onSuccess - Callback appelé après un paiement réussi.
+ * @param {Function} props.onError - Callback appelé en cas d'échec pour débloquer l'UI parente.
+ */
 const CheckoutForm = ({ onSuccess, onError }) => {
   const stripe = useStripe();
   const elements = useElements();
 
+  /**
+   * Gère la soumission du paiement vers les serveurs de Stripe.
+   * 
+   * Processus :
+   * 1. Validation de la présence de l'instance Stripe.
+   * 2. Confirmation du paiement avec les éléments saisis (CB, etc.).
+   * 3. 'redirect: "if_required"' permet de gérer les 3D Secure sans rechargement de page si possible.
+   * 4. En cas de succès ('succeeded'), déclenche la logique de création de commande.
+   */
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!stripe || !elements) return;
 
-    // C'est ici que l'argent est prélevé !
+    // Déclenchement de la transaction réelle.
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: "if_required",
     });
 
     if (error) {
+      // Erreur utilisateur (ex: carte refusée, expiration, etc.)
       toast.error(error.message);
-      if (onError) onError(); // On dit au bouton vert d'arrêter de tourner
+      if (onError) onError();
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      toast.success("Paiement validé !");
-      onSuccess(); // On lance la création de la commande Django
+      // Succès critique : le client a été prélevé.
+      toast.success("Paiement sécurisé validé !");
+      onSuccess(); // Propagation vers useCheckoutFlow pour enregistrer la commande en base.
     }
   };
 
   return (
     <form onSubmit={handleSubmit} id="stripe-payment-form">
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+        {/* Composant Stripe tout-en-un (Cartes, Portefeuilles, etc.) */}
         <PaymentElement />
       </div>
 
-      {/* LE FAMEUX BOUTON CACHÉ */}
-      {/* Il est invisible, mais le bouton "Valider & Payer" de l'étape 3 va cliquer dessus à distance */}
+      {/* 
+          ASTUCE TECHNIQUE : Bouton caché.
+          Le bouton principal de validation se trouve dans le composant Checkout.jsx.
+          Pour déclencher ce formulaire à distance, on utilise un document.getElementById('hidden-stripe-submit').click().
+      */}
       <button type="submit" id="hidden-stripe-submit" className="hidden">
         Submit caché
       </button>
@@ -47,43 +73,61 @@ const CheckoutForm = ({ onSuccess, onError }) => {
   );
 };
 
-// // N'oublie pas d'ajouter la prop "onError" dans le composant parent :
-// export default function StripePayement({ amount, onSuccess, onError }) {
-//     // ... le reste du code de ton composant ne change pas ...
-//     return (
-//       <Elements stripe={stripePromise} options={{ clientSecret }}>
-//         <CheckoutForm onSuccess={onSuccess} onError={onError} />
-//       </Elements>
-//     );
-// }
-// --- LE CONTENEUR PRINCIPAL QUI PARLE À DJANGO ---
+/**
+ * Composant principal pour l'intégration Stripe (Payment Element).
+ * 
+ * Ce composant orchestre :
+ * 1. La demande d'un clientSecret au backend Django.
+ * 2. L'affichage sécurisé du formulaire de paiement.
+ * 
+ * 👉 Voir les détails d'implémentation dans README.md, section "Gestion du Tunnel Stripe".
+ * 
+ * @param {Object} props
+ * @param {number} props.amount - Montant de la transaction (en unité standard, ex: 10.50).
+ * @param {Function} props.onSuccess - Action à mener après validation bancaire.
+ * @param {Function} props.onError - Action à mener en cas de refus bancaire.
+ */
 export default function StripePayement({ amount, onSuccess, onError }) {
+  /** @type {string} Le jeton secret permettant d'identifier la transaction auprès de Stripe. */
   const [clientSecret, setClientSecret] = useState("");
 
+  /**
+   * Effet de montage : Sollicite le backend pour créer une intention de paiement.
+   * S'exécute à chaque changement de montant.
+   */
   useEffect(() => {
-    // Dès que le composant s'affiche, on demande l'autorisation à Django
     const fetchPaymentIntent = async () => {
       try {
-        // Attention : Stripe prend des centimes, donc 35.500 DT -> 3550
-        // Pour l'EUR (configuré en backend), on multiplie par 100
+        // Stripe exige des centimes. Conversion : 35.50 -> 3550.
         const amountInCents = Math.round(parseFloat(amount) * 100);
-        console.log("Creating PaymentIntent for amount:", amountInCents);
-        const response = await api.post('/catalog/create-payment-intent/', { amount: amountInCents });
+        
+        // Appel au service Django (catalog/services.py -> create_payment_intent).
+        const response = await api.post('/catalog/create-payment-intent/', { 
+          amount: amountInCents 
+        });
+        
         setClientSecret(response.data.clientSecret);
       } catch (error) {
         console.error("Erreur d'initialisation Stripe:", error);
-        const message = error.response?.data?.error || "Impossible de contacter le serveur bancaire.";
+        const message = error.response?.data?.error || "Connexion au service de paiement impossible.";
         toast.error(message);
+        if (onError) onError();
       }
     };
-    fetchPaymentIntent();
-  }, [amount]);
 
+    if (amount > 0) fetchPaymentIntent();
+  }, [amount, onError]);
+
+  // État d'attente pendant la communication avec le backend/Stripe.
   if (!clientSecret) {
-    return <div className="text-center p-4 text-gray-500 font-bold animate-pulse">Connexion sécurisée en cours...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-gray-500 italic">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-4"></div>
+        Initialisation du tunnel de paiement sécurisé...
+      </div>
+    );
   }
 
-  // On englobe le formulaire avec la clé publique et l'autorisation secrète
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
       <CheckoutForm onSuccess={onSuccess} onError={onError}/>

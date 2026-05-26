@@ -126,7 +126,7 @@ const LandingPage = () => {
                         </div>
                     </div>
                     
-                    <div className='categoriesList flex items-stretch gap-4 md:gap-6 overflow-x-auto pb-4 scrollbar-hide px-1'>
+                    <div className='categoriesList flex items-stretch lg:justify-center gap-4 md:gap-6 overflow-x-auto pb-4 scrollbar-hide px-1'>
                         {[
                           { name: 'Pizza', img: pizzaImg, color: 'bg-red-50' },
                           { name: 'Burger', img: burgerImg, color: 'bg-orange-50' },
