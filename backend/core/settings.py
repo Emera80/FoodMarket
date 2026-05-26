@@ -73,7 +73,8 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+# On ajoute le chemin vers notre nouveau dossier global de templates
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -181,3 +182,7 @@ CHANNEL_LAYERS = {
 
 # Configuration Stripe (Mode Test)
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY') # 🚨 Remplace par ta vraie clé commençant par sk_test_
+
+# Frais de livraison (Configurables)
+# Cette valeur est utilisée pour le calcul du total et l'affichage des factures PDF.
+DELIVERY_FEE = 6.000

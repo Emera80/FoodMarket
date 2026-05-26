@@ -11,15 +11,22 @@ export function useAdminUsers() {
   const [loadingOrders, setLoadingOrders]   = useState(false);
   const [isModalOpen, setIsModalOpen]       = useState(false);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { 
+    fetchUsers(); 
 
-  const fetchUsers = async () => {
-    setLoading(true);
+    // Polling pour la liste des utilisateurs (toutes les 60 secondes)
+    // Les utilisateurs changent moins souvent que les commandes.
+    const interval = setInterval(() => fetchUsers(true), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUsers = async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     try {
       const response = await api.get('/accounts/utilisateurs/');
       setUsers(response.data.results || response.data);
     } catch {
-      toast.error('Erreur lors du chargement des utilisateurs');
+      if (!isRefresh) toast.error('Erreur lors du chargement des utilisateurs');
     } finally {
       setLoading(false);
     }

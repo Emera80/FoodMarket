@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, Eye, Filter, X, Store, Calendar } from 'lucide-react';
+import { Search, Eye, Filter, X, Store, Calendar, FileText, Download, Loader2 } from 'lucide-react';
 import { useAdminOrders, STATUTS_CONFIG } from '../../hooks/useAdminOrders';
+import { useDownloadInvoice } from '../../hooks/useDownloadInvoice';
 
 export default function AdminOrders() {
   const {
@@ -14,6 +15,8 @@ export default function AdminOrders() {
     handleStatusChange, resetFilters,
     filteredCommandes, FRAIS_LIVRAISON,
   } = useAdminOrders();
+
+  const { downloadInvoice, loading: downloading } = useDownloadInvoice();
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -142,14 +145,32 @@ export default function AdminOrders() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-[32px] w-full max-w-4xl overflow-hidden shadow-2xl animate-slideUp">
 
-            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <button onClick={closeModal} className="flex items-center gap-2 text-gray-500 font-bold hover:text-gray-900 transition-colors">
-                <X size={20} /> Retour
-              </button>
-              <h2 className="text-xl font-black text-gray-900">Commande <span className="text-orange-600">#{selectedOrder.id}</span></h2>
-              <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${STATUTS_CONFIG[selectedOrder.statut_livraison]?.color}`}>
-                {STATUTS_CONFIG[selectedOrder.statut_livraison]?.label}
-              </span>
+            <div className="px-8 py-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4 bg-gray-50/50">
+              <div className="flex items-center gap-6">
+                <button onClick={closeModal} className="flex items-center gap-2 text-gray-500 font-bold hover:text-gray-900 transition-colors">
+                  <X size={20} /> Retour
+                </button>
+                <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+                <h2 className="text-xl font-black text-gray-900">Commande <span className="text-orange-600">#{selectedOrder.id}</span></h2>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => downloadInvoice(selectedOrder.id, selectedOrder.id)}
+                  disabled={downloading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-gray-200"
+                >
+                  {downloading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  Facture PDF
+                </button>
+                <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-transparent ${STATUTS_CONFIG[selectedOrder.statut_livraison]?.color}`}>
+                  {STATUTS_CONFIG[selectedOrder.statut_livraison]?.label}
+                </span>
+              </div>
             </div>
 
             <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">

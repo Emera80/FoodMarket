@@ -56,6 +56,7 @@ class Commande(models.Model):
     adresse_livraison  = models.TextField()
     telephone_paiement = models.CharField(max_length=20, null=True, blank=True)
     mode_paiement      = models.CharField(max_length=20, choices=PAIEMENT_CHOICES)
+    numero_facture = models.CharField(max_length=50, unique=True, null=True, blank=True)
     created_at         = models.DateTimeField(auto_now_add=True, null=True)
     updated_at         = models.DateTimeField(auto_now=True, null=True)
 
@@ -65,8 +66,16 @@ class Commande(models.Model):
     def __str__(self):
         return f"Commande {self.id} - Utilisateur ID: {self.user.id}"
 
+    def generer_numero_facture(self):
+        # Logique pour créer un numéro unique lors de la confirmation
+        import datetime
+        annee = datetime.datetime.now().year
+        return f"FAC-{annee}-{self.id:04d}"
+
     class Meta:
         db_table = 'commandes'
+
+
 
 
 class CommandeItem(models.Model):

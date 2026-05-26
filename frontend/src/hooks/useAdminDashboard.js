@@ -47,7 +47,8 @@ export function useAdminDashboard() {
     /**
      * Fonction interne asynchrone pour orchestrer la récupération et le traitement.
      */
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (isRefresh = false) => {
+      if (!isRefresh) setLoading(true);
       try {
         // Récupération simultanée de tous les domaines de données nécessaires.
         const [ordersRes, usersRes, restRes, platsRes] = await Promise.all([
@@ -135,13 +136,19 @@ export function useAdminDashboard() {
         
       } catch (error) {
         console.error("Dashboard Error:", error);
-        toast.error('Erreur lors de la génération des statistiques');
+        // On ne montre l'erreur toast que lors du premier chargement pour éviter de spammer l'admin
+        if (!isRefresh) toast.error('Erreur lors de la génération des statistiques');
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
+
+    // Mise en place d'un polling (toutes les 30 secondes pour le dashboard)
+    // Le dashboard est plus lourd en calculs, on espace un peu plus.
+    const interval = setInterval(() => fetchDashboardData(true), 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // API publique du hook.

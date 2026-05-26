@@ -1,10 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  CheckCircle2, CreditCard, Wallet, Truck, ArrowRight, Check, Lock,
+  CheckCircle2, CreditCard, Wallet, Truck, ArrowRight, Check, Lock, Download, Loader2,
 } from "lucide-react";
 import StripePayment from "../../components/StripePayement.jsx";
 import { useCheckoutFlow } from "../../hooks/useCheckoutFlow";
+import { useDownloadInvoice } from "../../hooks/useDownloadInvoice";
 
 export default function Checkout() {
   const {
@@ -17,7 +18,10 @@ export default function Checkout() {
     mobileMoneyNumber, setMobileMoneyNumber,
     fraisLivraison, totalGeneral,
     handleSubmitOrder,
+    lastOrder,
   } = useCheckoutFlow();
+
+  const { downloadInvoice, loading: downloading } = useDownloadInvoice();
 
   if (cart.length === 0 && !isOrdered) {
     return (
@@ -38,15 +42,33 @@ export default function Checkout() {
         </div>
         <h1 className="text-4xl font-black text-gray-900 mb-4 text-center">Commande validée !</h1>
         <p className="text-gray-500 text-lg text-center max-w-md mb-10 font-medium">
-          Merci, votre repas est en cours de préparation. Vous pouvez suivre l'état de votre livraison dans votre historique.
+          Merci, votre repas est en cours de préparation. Votre facture est disponible dès maintenant au téléchargement ci-dessous.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-          <button onClick={() => navigate('/')} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition-all">
-            Retour à l'accueil
-          </button>
-          <button onClick={() => navigate('/orderhistory')} className="flex-1 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-50 transition-all">
-            Voir l'historique
-          </button>
+        
+        <div className="flex flex-col gap-4 w-full max-w-sm">
+          {lastOrder && (
+            <button 
+              onClick={() => downloadInvoice(lastOrder.id, lastOrder.id)}
+              disabled={downloading}
+              className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black shadow-lg shadow-orange-100 hover:bg-orange-700 transition-all flex items-center justify-center gap-3"
+            >
+              {downloading ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <Download size={24} />
+              )}
+              {downloading ? "Génération..." : "Télécharger ma facture"}
+            </button>
+          )}
+
+          <div className="flex gap-4">
+            <button onClick={() => navigate('/')} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition-all">
+              Retour à l'accueil
+            </button>
+            <button onClick={() => navigate('/orderhistory')} className="flex-1 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-50 transition-all text-sm px-2">
+              Voir historique
+            </button>
+          </div>
         </div>
       </div>
     );

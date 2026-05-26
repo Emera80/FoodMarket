@@ -33,40 +33,49 @@ export function useOrderHistory() {
   const [loading, setLoading]                 = useState(true);
 
   /**
+   * Fonction de récupération des données, extraite pour être réutilisable.
+   */
+  const fetchHistorique = async () => {
+    // 1. Vérification de la présence du token de session.
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      toast.error('Veuillez vous connecter pour voir votre historique.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      // 2. Récupération croisée des données (Commandes + Référentiels).
+      const [cmdRes, restRes, platsRes] = await Promise.all([
+        api.get('/orders/commandes/'),
+        api.get('/catalog/restaurants/'),
+        api.get('/catalog/plats/'),
+      ]);
+
+      // Stockage des résultats (gestion de la pagination backend incluse).
+      setCommandes(cmdRes.data.results || cmdRes.data);
+      setRestaurants(restRes.data.results || restRes.data);
+      setPlats(platsRes.data.results || platsRes.data);
+    } catch (error) {
+      console.error('Erreur chargement historique:', error);
+      toast.error("Impossible de charger l'historique des commandes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Effet de cycle de vie : Se déclenche au montage.
    * Récupère l'intégralité des données nécessaires à l'affichage de l'historique.
    */
   useEffect(() => {
-    const fetchHistorique = async () => {
-      // 1. Vérification de la présence du token de session.
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        toast.error('Veuillez vous connecter pour voir votre historique.');
-        navigate('/login');
-        return;
-      }
-
-      try {
-        // 2. Récupération croisée des données (Commandes + Référentiels).
-        const [cmdRes, restRes, platsRes] = await Promise.all([
-          api.get('/orders/commandes/'),
-          api.get('/catalog/restaurants/'),
-          api.get('/catalog/plats/'),
-        ]);
-
-        // Stockage des résultats (gestion de la pagination backend incluse).
-        setCommandes(cmdRes.data.results   || cmdRes.data);
-        setRestaurants(restRes.data.results || restRes.data);
-        setPlats(platsRes.data.results     || platsRes.data);
-      } catch (error) {
-        console.error('Erreur chargement historique:', error);
-        toast.error("Impossible de charger l'historique des commandes.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchHistorique();
+
+    // Mise en place d'un polling léger (toutes les 10 secondes) pour mettre à jour
+    // les statuts de commande sans action utilisateur, réduisant la latence perçue
+    // entre l'admin et le client.
+    const interval = setInterval(fetchHistorique, 10000);
+    return () => clearInterval(interval);
   }, [navigate]);
 
   // --- GESTIONNAIRES D'ÉVÉNEMENTS ---

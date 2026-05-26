@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Package, ChevronDown, ChevronUp, Clock, AlertCircle } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, Clock, AlertCircle, Download, Loader2 } from "lucide-react";
 import { useOrderHistory } from "../../hooks/useOrderHistory";
+import { useDownloadInvoice } from "../../hooks/useDownloadInvoice";
 import StatusBadge from "../../components/ui/StatusBadge";
 
 export default function OrderHistory() {
@@ -11,6 +12,11 @@ export default function OrderHistory() {
     toggleOrder,
     getRestaurantName, getPlatName, formatDate,
   } = useOrderHistory();
+
+  const { downloadInvoice, loading: downloading } = useDownloadInvoice();
+
+  // Condition métier : Facture téléchargeable uniquement si validée ou livrée
+  const isInvoiceAvailable = (status) => ['confirmee', 'en_preparation', 'en_livraison', 'livree'].includes(status);
 
   if (loading) {
     return (
@@ -90,6 +96,23 @@ export default function OrderHistory() {
                         >
                           Commander à nouveau
                         </Link>
+                        {isInvoiceAvailable(order.statut_livraison) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadInvoice(order.id, order.id);
+                            }}
+                            disabled={downloading}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-gray-800 transition-all disabled:opacity-50"
+                          >
+                            {downloading ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Download size={16} />
+                            )}
+                            Télécharger la facture
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

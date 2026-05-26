@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture FoodMarket</title>
+    <style>
+        /* 
+           REGLES D'OR xhtml2pdf :
+           1. Pas de Flexbox, pas de Grid.
+           2. Utilisation massive de <table> pour la structure.
+           3. CSS position: fixed ou float est très limité.
+           4. Les unités comme 'cm', 'mm' ou 'pt' sont préférables pour l'impression.
+        */
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            color: #111827; /* Dark Mode Text on White for Printing */
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-orange { color: #ea580c; }
+        .font-bold { font-weight: bold; }
+        .bg-dark { background-color: #111827; color: #ffffff; }
+        .border-b { border-bottom: 0.5pt solid #e5e7eb; }
+        .label { font-size: 8pt; color: #6b7280; text-transform: uppercase; margin-bottom: 2pt; letter-spacing: 0.5pt; }
+        
+        .item-row td { padding: 10pt 8pt; vertical-align: middle; }
+        .total-row td { padding: 4pt 0; }
+        
+        /* Conteneur principal simulant une marge interne */
+        .container { padding: 10pt; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 
+        STRUCTURE DE MISE EN PAGE :
+        On utilise des tables imbriquées avec des attributs 'width' explicites.
+        C'est la seule méthode fiable pour garantir l'alignement avec xhtml2pdf.
+    -->
+
+    <!-- HEADER / BRANDING -->
+    <table width="100%" style="border-bottom: 2pt solid #ea580c; padding-bottom: 10pt; margin-bottom: 20pt;">
+        <tr>
+            <td width="70%" valign="middle">
+                <span style="font-size: 24pt; font-weight: bold; color: #111827;">FoodMarket<span class="text-orange">.</span></span><br>
+                <span style="color: #6b7280; font-size: 9pt;">L'excellence culinaire livrée chez vous</span>
+            </td>
+            <td width="30%" class="text-right" valign="middle">
+                <span style="font-size: 18pt; font-weight: bold; color: #9ca3af;">FACTURE</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- INFOS CLIENT & FACTURE -->
+    <table width="100%" style="margin-bottom: 30pt;">
+        <tr>
+            <!-- Colonne Client -->
+            <td width="55%" valign="top">
+                <div class="label">Facturé à :</div>
+                <div class="font-bold" style="font-size: 13pt; margin-bottom: 4pt;">
+                    {{ nom_client }}
+                </div>
+                <div style="color: #4b5563; line-height: 1.4;">
+                    Adresse : {{ commande.adresse_livraison }}<br>
+                    Tél : {{ telephone_client }}
+                </div>
+            </td>
+            <!-- Colonne Détails Facture -->
+            <td width="45%" valign="top">
+                <table width="100%">
+                    <tr>
+                        <td width="50%">
+                            <div class="label">N° Facture :</div>
+                            <div class="font-bold">{{ numero_facture }}</div>
+                        </td>
+                        <td width="50%">
+                            <div class="label">Date :</div>
+                            <div class="font-bold">{{ commande.date|date:"d M Y" }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="padding-top: 15pt;">
+                            <div class="label">Restaurant :</div>
+                            <div class="font-bold text-orange" style="font-size: 12pt;">
+                                {{ restaurant_nom }}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- TABLEAU DES ARTICLES -->
+    <table width="100%" style="margin-bottom: 20pt;" cellpadding="0" cellspacing="0">
+        <thead>
+            <tr class="bg-dark">
+                <th width="45%" align="left" style="font-size: 9pt; padding: 10pt 8pt;">DESCRIPTION</th>
+                <th width="10%" align="center" style="font-size: 9pt; padding: 10pt 8pt;">QTÉ</th>
+                <th width="20%" align="right" style="font-size: 9pt; padding: 10pt 8pt;">PRIX UNITAIRE</th>
+                <th width="25%" align="right" style="font-size: 9pt; padding: 10pt 8pt;">SOUS-TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in commande.items.all %}
+            <tr class="item-row">
+                <td class="border-b">{{ item.plat.nom }}</td>
+                <td class="border-b text-center">x{{ item.quantite }}</td>
+                <td class="border-b text-right">{{ item.prix_unitaire }} DT</td>
+                <td class="border-b text-right font-bold">{{ item.sous_total }} DT</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="border-b text-center" style="padding: 30pt; color: #9ca3af;">
+                    Aucun article trouvé pour cette commande.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- RÉSUMÉ PAIEMENT ET TOTAUX -->
+    <table width="100%">
+        <tr>
+            <!-- Méthode de paiement -->
+            <td width="50%" valign="top">
+                <div class="label">Mode de paiement :</div>
+                <div class="font-bold" style="margin-top: 4pt;">
+                    {{ mode_paiement_clean }}
+                </div>
+                <div style="margin-top: 15pt; font-size: 9pt; color: #6b7280; font-style: italic;">
+                    Note : Ce document sert de preuve d'achat officielle pour vos services FoodMarket.
+                </div>
+                <!-- 
+                     NOTE TECHNIQUE :
+                     Nous passons 'mode_paiement_clean' depuis la vue Django car xhtml2pdf 
+                     ne supporte pas les filtres de template complexes comme |replace.
+                -->
+            </td>
+            <!-- Totaux -->
+            <td width="50%" valign="top">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr class="total-row">
+                        <td width="60%" style="color: #6b7280;">Sous-total HT</td>
+                        <td width="40%" class="text-right">{{ commande.total }} DT</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td style="color: #6b7280; border-bottom: 1pt solid #111827; padding-bottom: 8pt;">Frais de livraison</td>
+                        <td class="text-right" style="border-bottom: 1pt solid #111827; padding-bottom: 8pt;">{{ frais_livraison }} DT</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td style="padding-top: 12pt; font-size: 11pt; font-weight: bold; text-transform: uppercase;">Total à payer</td>
+                        <td class="text-right text-orange" style="padding-top: 12pt; font-size: 16pt; font-weight: bold;">
+                            {{ commande.total }} DT
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- FOOTER -->
+    <div style="margin-top: 60pt; border-top: 1pt solid #e5e7eb; padding-top: 10pt; font-size: 8pt; color: #9ca3af; text-align: center;">
+        <p>
+            FoodMarket SARL - La marketplace de vos envies gourmandes<br>
+            Merci de votre confiance ! Pour toute assistance, contactez support@foodmarket.com<br>
+            Généré le {{ date_generation|date:"d/m/Y à H:i" }}
+        </p>
+    </div>
+</div>
+
+</body>
+</html>

@@ -60,14 +60,23 @@ export function useAdminOrders() {
   /**
    * Effet d'initialisation : charge les données au montage du composant.
    */
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+
+    // Polling pour les commandes (toutes les 15 secondes)
+    // Permet de voir les nouvelles commandes arriver sans rafraîchir.
+    const interval = setInterval(() => fetchData(true), 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   /**
    * Récupère de manière asynchrone les commandes et les restaurants.
    * Utilise Promise.all pour paralléliser les appels API et optimiser le temps de réponse.
+   * 
+   * @param {boolean} isRefresh - Si vrai, n'active pas le spinner de chargement global.
    */
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     try {
       const [ordRes, restRes] = await Promise.all([
         api.get('/orders/commandes/'),
@@ -77,7 +86,7 @@ export function useAdminOrders() {
       setCommandes(ordRes.data.results || ordRes.data);
       setRestaurants(restRes.data.results || restRes.data);
     } catch {
-      toast.error('Erreur de chargement des commandes');
+      if (!isRefresh) toast.error('Erreur de chargement des commandes');
     } finally {
       setLoading(false);
     }

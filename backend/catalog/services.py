@@ -56,10 +56,8 @@ def create_payment_intent(amount_cents: int, user_email: str) -> dict:
     intent = stripe.PaymentIntent.create(
         amount=amount_cents,
         currency='eur',
-        # Active les méthodes de paiement dynamiques (Cartes, Portefeuilles numériques, etc.)
-        automatic_payment_methods={
-            'enabled': True,
-        },
+        # Active les méthodes de paiement dynamiques (Carte)
+        payment_method_types=['card'],
         description=f"Commande Food Market - Client: {user_email}",
     )
     return {'clientSecret': intent['client_secret']}

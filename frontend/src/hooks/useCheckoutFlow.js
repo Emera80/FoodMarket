@@ -45,12 +45,31 @@ export function useCheckoutFlow() {
   const [showMobileMoneyInput, setShowMobileMoneyInput] = useState(false);
   /** @type {string} Numéro spécifique pour le prélèvement Mobile Money. */
   const [mobileMoneyNumber, setMobileMoneyNumber] = useState('');
+  /** @type {number} Frais de livraison récupérés depuis le backend. */
+  const [fraisLivraison, setFraisLivraison] = useState(3.500);
+  /** @type {Object|null} Commande créée avec succès (pour téléchargement facture). */
+  const [lastOrder, setLastOrder] = useState(null);
 
   // --- LOGIQUE DE CALCUL ---
-  /** @const {number} Frais fixes de livraison (exprimés en DT/EUR selon config). */
-  const fraisLivraison = 3.500;
   /** @const {number} Montant total final à payer. */
   const totalGeneral = cartTotal + fraisLivraison;
+
+  // --- EFFETS ---
+
+  /**
+   * Récupère les frais de livraison configurés au backend.
+   */
+  useEffect(() => {
+    const fetchDeliveryFee = async () => {
+      try {
+        const response = await api.get('/orders/delivery-fee/');
+        setFraisLivraison(parseFloat(response.data));
+      } catch (error) {
+        console.error('Erreur lors de la récupération des frais de livraison:', error);
+      }
+    };
+    fetchDeliveryFee();
+  }, []);
 
   /**
    * Sécurité : Redirige vers la page de connexion si le jeton d'accès est absent.
@@ -126,8 +145,9 @@ export function useCheckoutFlow() {
     try {
       // Envoi de la commande à l'API. 
       // 👉 Voir les détails du traitement backend dans orders/services.py.
-      await api.post('/orders/commandes/', payload);
+      const response = await api.post('/orders/commandes/', payload);
       
+      setLastOrder(response.data);
       setIsOrdered(true);
       // On vide le panier après un court délai pour laisser l'animation de succès se jouer.
       setTimeout(() => clearCart(), 500);
@@ -148,6 +168,7 @@ export function useCheckoutFlow() {
     mobileMoneyNumber, setMobileMoneyNumber,
     fraisLivraison, totalGeneral,
     handleSubmitOrder,
+    lastOrder,
     navigate,
   };
 }
