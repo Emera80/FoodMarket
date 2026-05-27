@@ -86,7 +86,7 @@ export default function NotificationBell() {
 
     // Connexion au salon de diffusion Django Channels.
     // L'identifiant utilisateur est passé pour le routage ciblé côté serveur.
-    const wsUrl = `${import.meta.env.VITE_API_URL.replace(/^http/, 'ws')}/ws/admin-notifications/?user_id=${userId || ''}`;
+    const wsUrl = `${import.meta.env.VITE_WS_URL}/ws/admin-notifications/?user_id=${userId || ''}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => console.log('✅ Bus de notifications connecté.');
