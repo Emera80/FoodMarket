@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env')
 
-
+import dj_database_url
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -106,16 +106,27 @@ ASGI_APPLICATION = 'core.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'food_marketplace_db'),
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '3308'),
+# Si la variable DATABASE_URL existe (.env), on utilise Supabase (PostgreSQL)
+if os.getenv('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True # Obligatoire pour sécuriser la connexion avec Supabase
+        )
     }
-}
+else:
+    # Sinon, on reste sur ton MySQL local (ton code actuel)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'food_marketplace_db'),
+            'USER': os.getenv('DB_USER', 'root'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '3308'),
+        }
+    }
 
 
 # Password validation
@@ -179,15 +190,27 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # 3. Ajoute tout en bas de ton settings.py la configuration du "Channel Layer" (Redis)
 # C'est ce qui permet aux différentes connexions de communiquer entre elles.
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            # On pointe vers le port 6379 que l'on vient d'ouvrir avec Docker
-            "hosts": [("127.0.0.1", 6379)],
+# --- CONFIGURATION WEBSOCKETS (CHANNELS) ---
+# Si on détecte le Redis Upstash dans le .env, on l'utilise (Production)
+if os.getenv('REDIS_URL'):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [os.getenv('REDIS_URL')],
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                # On pointe vers le port 6379 que l'on vient d'ouvrir avec Docker
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
+    }
 
 # Configuration Stripe (Mode Test)
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY') # 🚨 Remplace par ta vraie clé commençant par sk_test_
