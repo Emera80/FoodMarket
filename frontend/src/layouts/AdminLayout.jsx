@@ -60,6 +60,11 @@ export default function AdminLayout() {
           <div className="px-4 py-2 bg-gray-800 rounded-xl border border-gray-700">
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Résolution minimale : 768px</p>
           </div>
+          <div>
+            <div className="px-2 py-2 bg-orange-500 rounded-2xl text-white text-sm font-bold hover:bg-orange-600 transition-colors">
+              <Link to="/"  >Retourner au site</Link>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -127,7 +132,9 @@ export default function AdminLayout() {
           <div className="hidden lg:block" />
 
           <div className="flex items-center gap-4 md:gap-6">
-            <NotificationBell />
+            <div className="hidden md:block">
+              <NotificationBell />
+            </div>
             <div className="flex items-center gap-3 pl-4 md:pl-6 border-l border-gray-200">
               <div className="text-right hidden md:block">
                 <p className="text-sm font-black text-gray-900 leading-none">Administrateur</p>

@@ -3,8 +3,54 @@ import React from 'react';
 import { Share2, Globe, Utensils, Cherry } from 'lucide-react';
 import logoImg from '../assets/foodCategoriesImg/logo.png';
 import { Link } from 'react-router-dom';
+import {useState} from "react";
+import toast from "react-hot-toast";
 
 export default function Footer() {
+
+  const [newsletterData, setNewsletterData] = useState({email: "", valid: false});
+
+  // 2. Gestion de la soumission et du LocalStorage
+  const handleNewsletterSubmit = (e) => {
+    e.preventDefault();
+
+    const emailTrimmed = newsletterData.email.trim();
+
+    // Vérification basique
+    if (emailTrimmed === "") {
+      toast.error("Veuillez entrer une adresse email valide.");
+      setNewsletterData((prev) => ({ ...prev, valid: false }));
+      return; // On stoppe l'exécution de la fonction ici
+    }
+
+    // --- LE FAUX BACKEND (LocalStorage) --- //
+
+    try {
+      // On sauvegarde l'email dans le navigateur de l'utilisateur
+      localStorage.setItem("foodmarket_newsletter", emailTrimmed);
+
+      // On met à jour le state pour confirmer que c'est valide
+      setNewsletterData({ email: " ", valid: true }); // On vide le champ en passant
+
+      toast.success("Merci ! Vous êtes bien abonné à notre newsletter.");
+
+    } catch (error) {
+      toast.error("Erreur lors de l'enregistrement.");
+    }
+  };
+  // 1. Gestion de la saisie
+  const handleEmailChange = (e) => {
+    // Déstructuration correcte d'un objet
+    const { name, value } = e.target;
+
+    // On met à jour proprement via le setter
+    setNewsletterData((prevData) => ({
+      ...prevData,      // On récupère tout l'ancien objet
+      [name]: value,    // On met à jour uniquement le champ modifié (l'email)
+      valid: false      // On réinitialise la validité dès que l'utilisateur tape
+    }));
+  };
+
   return (
     // On garde la marge de 10 et on enlève les bords arrondis
     <footer className="bg-black rounded-none mt-0 mx-4 md:mx-10 pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 px-5 sm:px-10 md:px-14 lg:px-20 border-t border-zinc-800">
@@ -67,10 +113,14 @@ export default function Footer() {
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">
               Abonnez-vous pour recevoir des codes promo exclusifs et nos nouveautés !
             </p>
-            <form className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex flex-col gap-3" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
                 placeholder="Votre adresse email"
+                name="email"
+                id="email"
+                value={newsletterData.email}
+                onChange={handleEmailChange}
                 className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-[#FF6B00] transition-colors w-full text-sm"
               />
               <button

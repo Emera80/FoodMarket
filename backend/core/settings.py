@@ -24,13 +24,16 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-28mtl&za+eelo$)ru74@wv_+n23rakyz3_c*abts+xcomkg%h+'
+SECRET_KEY = os.getenv('SECRET_KEY', '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# --- SÉCURITÉ ---
+# Si DEBUG n'est pas dans le .env, il sera False par défaut (sécurité maximale)
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
-
+# On lit les hôtes séparés par des virgules dans le .env
+# ex: "127.0.0.1,localhost,mon-backend.onrender.com"
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 # Application definition
 
@@ -64,7 +67,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+
+# On n'ouvre la porte qu'à notre frontend React (local et Vercel)
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173'
+).split(',')
 
 AUTH_USER_MODEL = 'accounts.Utilisateur'
 
@@ -100,11 +109,11 @@ ASGI_APPLICATION = 'core.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'food_marketplace_db',
-        'USER': 'root',
-        'PASSWORD': 'emera@243&&jZK#',
-        'HOST': 'localhost',
-        'PORT': '3308',
+        'NAME': os.getenv('DB_NAME', 'food_marketplace_db'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '3308'),
     }
 }
 
