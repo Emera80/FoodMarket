@@ -187,7 +187,7 @@ export default function AdminSettings() {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await axios.put('http://127.0.0.1:8000/api/accounts/profile/update/', profileSettings, {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/accounts/profile/update/`, profileSettings, {
         headers: { Authorization: `Bearer ${token}` }
       });
       localStorage.setItem('username', res.data.nom);
@@ -206,7 +206,7 @@ export default function AdminSettings() {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      await axios.post('http://127.0.0.1:8000/api/accounts/profile/change-password/', securitySettings, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/accounts/profile/change-password/`, securitySettings, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Mot de passe modifié avec succès !");

@@ -29,10 +29,10 @@
 
 //       try {
 //         const [userRes, orderRes] = await Promise.all([
-//           axios.get('http://127.0.0.1:8000/api/accounts/utilisateurs/', {
+//           axios.get(`${import.meta.env.VITE_API_URL}/api/accounts/utilisateurs/`, {
 //             headers: { Authorization: `Bearer ${token}` }
 //           }),
-//           axios.get('http://127.0.0.1:8000/api/orders/commandes/', {
+//           axios.get(`${import.meta.env.VITE_API_URL}/api/orders/commandes/`, {
 //             headers: { Authorization: `Bearer ${token}` }
 //           })
 //         ]);
@@ -70,7 +70,7 @@
 //     const token = localStorage.getItem('access_token');
 
 //     try {
-//       await axios.patch(`http://127.0.0.1:8000/api/accounts/utilisateurs/${userData.id}/`, userData, {
+//       await axios.patch(`${import.meta.env.VITE_API_URL}/api/accounts/utilisateurs/${userData.id}/`, userData, {
 //         headers: { Authorization: `Bearer ${token}` }
 //       });
 
@@ -307,7 +307,7 @@ import {
   Lock, Save, Plus, Trash2, Camera, Wallet, ShoppingBag, ChevronRight, X, Loader2 
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://127.0.0.1:8000'; // Toujours nécessaire pour les images si pas d'URL complète
+const API_BASE_URL = import.meta.env.VITE_API_URL; // Toujours nécessaire pour les images si pas d'URL complète
 
 const normalizeAvatarUrl = (avatar) => {
   if (!avatar) return null;

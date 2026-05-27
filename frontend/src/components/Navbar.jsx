@@ -17,7 +17,7 @@ import logoImg from '../assets/foodCategoriesImg/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const normalizeAvatarUrl = (avatar) => {
   if (!avatar) return null;

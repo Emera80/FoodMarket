@@ -27,12 +27,12 @@ export default function AuthPage() {
 		setLoading(true);
 		setError("");
 		try {
-			const response = await axios.post("http://127.0.0.1:8000/api/token/", loginData);
+			const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/token/`, loginData);
 			localStorage.setItem("access_token", response.data.access);
 			localStorage.setItem("refresh_token", response.data.refresh);
 
 			const profileRes = await axios.get(
-				`http://127.0.0.1:8000/api/accounts/utilisateurs/?search=${loginData.email}`,
+				`${import.meta.env.VITE_API_URL}/api/accounts/utilisateurs/?search=${loginData.email}`,
 				{ headers: { Authorization: `Bearer ${response.data.access}` } }
 			);
 			const usersList = profileRes.data.results || profileRes.data;
@@ -58,7 +58,7 @@ export default function AuthPage() {
 		setLoading(true);
 		setError("");
 		try {
-			await axios.post("http://127.0.0.1:8000/api/accounts/utilisateurs/", signupData);
+			await axios.post(`${import.meta.env.VITE_API_URL}/api/accounts/utilisateurs/`, signupData);
 			toast.success("Compte créé ! Connectez-vous.");
 			setIsLogin(true);
 		} catch {

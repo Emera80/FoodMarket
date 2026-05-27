@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale/fr';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const normalizeUrl = (avatar) => {
   if (!avatar) return null;

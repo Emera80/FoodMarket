@@ -9,7 +9,7 @@ export default function RestaurantList() {
 	useEffect(() => {
 		// L'appel à ton API Django REST Framework
 		axios
-			.get("http://127.0.0.1:8000/api/catalog/restaurants/")
+			.get(`${import.meta.env.VITE_API_URL}/api/catalog/restaurants/`)
 			.then((response) => {
 				setRestaurants(response.data);
 				setLoading(false);

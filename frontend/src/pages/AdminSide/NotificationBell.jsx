@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
  * URL de base pour les communications temps réel (WebSocket).
  * Centralisée pour faciliter le passage en production.
  */
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Composant NotificationBell - Gestionnaire de notifications temps réel.
@@ -86,7 +86,7 @@ export default function NotificationBell() {
 
     // Connexion au salon de diffusion Django Channels.
     // L'identifiant utilisateur est passé pour le routage ciblé côté serveur.
-    const wsUrl = `ws://127.0.0.1:8000/ws/admin-notifications/?user_id=${userId || ''}`;
+    const wsUrl = `${import.meta.env.VITE_API_URL.replace(/^http/, 'ws')}/ws/admin-notifications/?user_id=${userId || ''}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => console.log('✅ Bus de notifications connecté.');
@@ -228,7 +228,7 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      await axios.post('http://127.0.0.1:8000/api/catalog/notifications/marquer_tout_lu/', {}, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/catalog/notifications/marquer_tout_lu/`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -244,7 +244,7 @@ export default function NotificationBell() {
     e.stopPropagation(); // Évite de trigger le clic sur la notif
     try {
       const token = localStorage.getItem('access_token');
-      await axios.delete(`http://127.0.0.1:8000/api/catalog/notifications/${id}/`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/catalog/notifications/${id}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
