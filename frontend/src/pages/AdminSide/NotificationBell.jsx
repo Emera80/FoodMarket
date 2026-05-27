@@ -80,91 +80,79 @@ export default function NotificationBell() {
    * Établit et maintient une connexion persistante pour recevoir des alertes "Push".
    */
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userId = localStorage.getItem('user_id');
-    if (!token) return;
+    let ws = null;
+    let reconnectTimeout = null;
 
-    // Connexion au salon de diffusion Django Channels.
-    // Sécurité : On transmet l'ID utilisateur ET son Rôle pour le filtrage côté serveur.
-    const wsUrl = `${import.meta.env.VITE_WS_URL}/ws/admin-notifications/?user_id=${userId || ''}&role=${userRole || 'client'}`;
-    const ws = new WebSocket(wsUrl);
+    const connectWS = () => {
+      const token = localStorage.getItem('access_token');
+      const userId = localStorage.getItem('user_id');
+      const userRole = localStorage.getItem('user_role');
+      
+      if (!token || !userId) return;
 
-    ws.onopen = () => console.log('✅ Bus de notifications connecté.');
+      const wsUrl = `${import.meta.env.VITE_WS_URL}/ws/admin-notifications/?user_id=${userId}&role=${userRole || 'client'}`;
+      ws = new WebSocket(wsUrl);
 
-    /**
-     * Traitement des messages entrants.
-     * Chaque message reçu déclenche un Toast visuel et met à jour la liste locale.
-     */
-    ws.onmessage = (event) => {
-      // Si on est sur mobile et que le toast est déjà affiché, on ignore le nouveau toast visuel
-      // mais on met à jour la liste.
-      try {
-        const data = JSON.parse(event.data);
+      ws.onopen = () => console.log(`✅ Bus de notifications connecté pour ${userId} (${userRole})`);
 
-        if (data.type === 'nouvelle_notification') {
-          const payload = data.payload;
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'nouvelle_notification') {
+            const payload = data.payload;
+            toast.success(payload.titre, {
+              duration: 3000, 
+              position: window.innerWidth < 1024 ? 'bottom-center' : 'top-right',
+              icon: '🔔',
+              id: `notif-${payload.id || Date.now()}`,
+              style: { maxWidth: '90vw', fontSize: '14px' }
+            });
 
-          // Feedback visuel immédiat (Toast).
-          toast.success(payload.titre, {
-            duration: 3000, 
-            position: window.innerWidth < 1024 ? 'bottom-center' : 'top-right',
-            icon: '🔔',
-            id: `notif-${payload.id || Date.now()}`, // Évite les doublons
-            style: {
-              maxWidth: '90vw',
-              fontSize: '14px'
+            let redirectUrl = payload.url_redirection || '/';
+            if (redirectUrl.includes('order') && localStorage.getItem('user_role') !== 'admin') {
+              redirectUrl = '/orderhistory';
             }
-          });
 
-          // Normalisation de l'URL cible selon le rôle (Routage intelligent).
-          let redirectUrl = payload.url_redirection || '/';
-          if (redirectUrl.includes('order') && localStorage.getItem('user_role') !== 'admin') {
-            redirectUrl = '/orderhistory';
+            const newNotif = {
+              id: payload.id || `ws-${Date.now()}`,
+              titre: payload.titre,
+              description: payload.description,
+              created_at: payload.created_at || new Date().toISOString(),
+              est_lu: false,
+              type: (redirectUrl.toLowerCase().includes('order') || payload.titre?.toLowerCase().includes('commande')) ? 'COMMANDE' : 'MESSAGE',
+              url_redirection: redirectUrl
+            };
+
+            setNotifications(prev => [newNotif, ...prev]);
+            setUnreadCount(prevCount => prevCount + 1);
           }
-
-          // Création de l'objet de notification pour le state React.
-          const newNotif = {
-            id: payload.id || `ws-${Date.now()}`,
-            titre: payload.titre,
-            description: payload.description,
-            created_at: payload.created_at || new Date().toISOString(),
-            est_lu: false,
-            // Détection automatique du type pour l'icône/couleur.
-            type: (redirectUrl.toLowerCase().includes('order') || payload.titre?.toLowerCase().includes('commande')) ? 'COMMANDE' : 'MESSAGE',
-            url_redirection: redirectUrl
-          };
-
-          setNotifications(prev => [newNotif, ...prev]);
-          setUnreadCount(prevCount => prevCount + 1);
+        } catch (err) {
+          console.error('Erreur traitement WS', err);
         }
-      } catch (err) {
-        console.error('Erreur lors du traitement du message WS', err);
-      }
+      };
+
+      ws.onclose = (e) => {
+        if (!e.wasClean) {
+          console.warn('⚠️ Connexion WS perdue. Reconnexion dans 5s...');
+          reconnectTimeout = setTimeout(connectWS, 5000);
+        }
+      };
+
+      ws.onerror = (err) => console.error('❌ Erreur WS:', err);
     };
 
-    ws.onclose = (event) => {
-      if (event.wasClean) {
-        console.log('❌ Bus de notifications déconnecté proprement.');
-      } else {
-        console.warn('⚠️ Connexion WebSocket perdue. Tentative de reconnexion dans 5s...');
-        setTimeout(() => {
-          // Note: Dans un vrai hook de production, on utiliserait un état pour déclencher le useEffect
-          // ou une fonction de connexion récursive. Ici, comme c'est simple, 
-          // le rechargement du composant ou un mécanisme interne suffirait.
-          // Pour corriger le bug de "blocage", on s'assure surtout que le toast ne reste pas.
-        }, 5000);
-      }
-    };
+    connectWS();
 
-    ws.onerror = (error) => {
-      console.error('❌ Erreur WebSocket:', error);
+    const handleAuth = () => {
+      if (ws) ws.close();
+      connectWS();
     };
+    window.addEventListener('authChange', handleAuth);
 
-    // Nettoyage de la socket lors du démontage du composant.
     return () => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close();
-      }
+      window.removeEventListener('authChange', handleAuth);
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, []);
 

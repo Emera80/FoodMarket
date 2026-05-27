@@ -41,6 +41,7 @@ export default function AuthPage() {
 				: usersList;
 
 			localStorage.setItem('username', user.username || user.nom || loginData.email.split('@')[0]);
+			localStorage.setItem('user_id', user.id);
 			localStorage.setItem('user_role', user.role || 'client');
 			if (user.avatar) localStorage.setItem('user_avatar', user.avatar);
 			window.dispatchEvent(new Event('authChange'));
