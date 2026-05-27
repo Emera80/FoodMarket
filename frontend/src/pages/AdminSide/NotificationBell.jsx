@@ -85,8 +85,8 @@ export default function NotificationBell() {
     if (!token) return;
 
     // Connexion au salon de diffusion Django Channels.
-    // L'identifiant utilisateur est passé pour le routage ciblé côté serveur.
-    const wsUrl = `${import.meta.env.VITE_WS_URL}/ws/admin-notifications/?user_id=${userId || ''}`;
+    // Sécurité : On transmet l'ID utilisateur ET son Rôle pour le filtrage côté serveur.
+    const wsUrl = `${import.meta.env.VITE_WS_URL}/ws/admin-notifications/?user_id=${userId || ''}&role=${userRole || 'client'}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => console.log('✅ Bus de notifications connecté.');

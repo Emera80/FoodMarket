@@ -20,66 +20,62 @@ class AdminNotificationConsumer(AsyncWebsocketConsumer):
         """
         Initialise la connexion WebSocket et gère l'abonnement aux groupes de diffusion.
 
-        Logique d'identification :
-        L'ID utilisateur est extrait de la Query String (ex: ?user_id=12).
-        En production, cette identification devrait être sécurisée via un jeton JWT
-        dans les en-têtes ou via le middleware d'authentification de Channels.
+        Logique d'identification et de sécurité :
+        1. L'ID utilisateur et le Rôle sont extraits de la Query String.
+        2. Abonnement au canal personnel (user_{id}) pour toutes les notifications ciblées.
+        3. Restriction : Seuls les utilisateurs ayant le rôle 'admin' sont abonnés au groupe
+           global 'admin_notifications'. Cela empêche les clients de recevoir des alertes de gestion.
         """
         try:
-            # Extraction de l'ID utilisateur pour le routage ciblé.
+            # Extraction des paramètres de connexion.
             query_params = self.scope['query_string'].decode('utf-8')
-            self.user_id = query_params.split('user_id=')[-1] if 'user_id=' in query_params else None
+            params = dict(x.split('=') for x in query_params.split('&') if '=' in x)
+            
+            self.user_id = params.get('user_id')
+            self.user_role = params.get('role', 'client')
             
             groups_to_add = []
             
-            # Abonnement au canal personnel de l'utilisateur.
+            # 1. Abonnement au canal personnel (Recommandé pour tous).
             if self.user_id:
                 self.user_group = f"user_{self.user_id}"
                 groups_to_add.append(self.user_group)
             else:
                 self.user_group = None
 
-            # Abonnement systématique au groupe administratif pour centraliser les alertes de gestion.
-            self.admin_group = 'admin_notifications'
-            groups_to_add.append(self.admin_group)
+            # 2. Sécurisation : Seuls les admins accèdent au flux administratif global.
+            if self.user_role == 'admin':
+                self.admin_group = 'admin_notifications'
+                groups_to_add.append(self.admin_group)
+            else:
+                self.admin_group = None
 
-            # Enregistrement de la connexion dans la couche Redis (Channel Layer).
+            # Enregistrement dans la couche Redis.
             for group in groups_to_add:
-                await self.channel_layer.group_add(
-                    group,
-                    self.channel_name
-                )
+                await self.channel_layer.group_add(group, self.channel_name)
 
-            # Finalisation du handshake WebSocket.
             await self.accept()
 
-            # Message de confirmation de protocole envoyé au frontend.
             await self.send(text_data=json.dumps({
                 'type': 'connection_established',
                 'status': 'success',
-                'message': 'Connecté au bus de notifications Food Market.'
+                'role_detected': self.user_role,
+                'message': f'Connecté au bus ({self.user_role})'
             }))
 
         except Exception as e:
-            # En cas d'erreur critique, on ferme la connexion pour éviter les états incohérents.
             print(f"[WS-AUTH-ERR] Échec de connexion : {e}")
             await self.close()
 
     async def disconnect(self, close_code):
         """
-        Libère proprement les ressources lors de la fermeture de la socket.
-        Retire l'instance actuelle des groupes Redis pour éviter les fuites de mémoire.
+        Nettoyage des abonnements lors de la déconnexion.
         """
         if hasattr(self, 'user_group') and self.user_group:
-            await self.channel_layer.group_discard(
-                self.user_group,
-                self.channel_name
-            )
+            await self.channel_layer.group_discard(self.user_group, self.channel_name)
         
-        await self.channel_layer.group_discard(
-            'admin_notifications',
-            self.channel_name
-        )
+        if hasattr(self, 'admin_group') and self.admin_group:
+            await self.channel_layer.group_discard(self.admin_group, self.channel_name)
 
     async def send_admin_notification(self, event):
         """

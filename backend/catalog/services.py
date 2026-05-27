@@ -137,23 +137,20 @@ def broadcast_notification_via_ws(notification) -> None:
     Cette fonction fait le pont entre le monde synchrone de Django (ORM/Signaux) 
     et le monde asynchrone de Django Channels (ASGI).
 
-    Stratégie de routage :
-    1. Routage Individuel : Envoi au groupe `user_{id}` du destinataire.
-    2. Routage Administratif : Si le destinataire est admin, envoi au groupe global `admin_notifications`.
-
-    👉 Voir les détails d'implémentation dans le fichier README.md, section "Architecture des Notifications Temps Réel".
-
-    Args:
-        notification (Notification): L'instance de notification à diffuser.
+    Stratégie de routage intelligente :
+    - Si l'utilisateur est un ADMIN : On utilise EXCLUSIVEMENT le groupe global 'admin_notifications'.
+      Cela permet une gestion centralisée et évite les notifications en double si l'admin est
+      identifié à la fois par son ID et son rôle.
+    - Si l'utilisateur est un CLIENT : On utilise son groupe personnel 'user_{id}'.
     """
     from channels.layers import get_channel_layer
     from asgiref.sync import async_to_sync
 
     try:
         channel_layer = get_channel_layer()
-        
-        # Préparation du dictionnaire de données (Payload) pour le frontend.
-        # On s'assure que les dates sont au format ISO pour la compatibilité JSON.
+        if not channel_layer:
+            return
+
         payload = {
             'id': notification.id,
             'titre': notification.titre,
@@ -165,22 +162,17 @@ def broadcast_notification_via_ws(notification) -> None:
             ),
         }
 
-        # Diffusion vers le canal personnel de l'utilisateur.
-        # Permet l'affichage des Toasts et la mise à jour de la cloche en temps réel.
+        # Détermination du canal de diffusion prioritaire
         if notification.user:
-            user_group = f"user_{notification.user.id}"
+            if notification.user.role == 'admin':
+                # Pour les admins, on privilégie le bus global pour assurer la réception multi-écrans
+                target_group = 'admin_notifications'
+            else:
+                # Pour les clients, routage direct et privé
+                target_group = f"user_{notification.user.id}"
+            
             async_to_sync(channel_layer.group_send)(
-                user_group,
-                {
-                    'type': 'send_admin_notification', # Méthode cible dans le Consumer
-                    'valeur': payload,
-                },
-            )
-
-        # Diffusion redondante vers le groupe admin pour les outils de monitoring globaux.
-        if notification.user and notification.user.role == 'admin':
-            async_to_sync(channel_layer.group_send)(
-                'admin_notifications',
+                target_group,
                 {
                     'type': 'send_admin_notification',
                     'valeur': payload,
@@ -188,6 +180,4 @@ def broadcast_notification_via_ws(notification) -> None:
             )
             
     except Exception as e:
-        # On capture les erreurs d'infrastructure (ex: Redis indisponible) pour ne pas bloquer 
-        # le flux principal de l'application (sauvegarde en base).
         print(f"[WS-ERR] Échec de diffusion : {e}")
