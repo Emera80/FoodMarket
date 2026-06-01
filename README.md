@@ -1,5 +1,12 @@
 # DS-TECH-WEB - Plateforme de Commande de Repas en Ligne
 
+[![Django](https://img.shields.io/badge/Framework-Django%205.x-092E20?style=for-the-badge&logo=django&logoColor=white)](https://docs.djangoproject.com/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Upstash](https://img.shields.io/badge/Cache-Upstash%20Redis-00E599?style=for-the-badge&logo=upstash&logoColor=black)](https://upstash.com/)
+[![Stripe](https://img.shields.io/badge/Payment-Stripe-008CDD?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com/)
+[![Render](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/)
+[![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+
 DS-TECH-WEB est une application web moderne de type SaaS permettant la commande et la livraison de repas. Le projet est construit avec une architecture découplée utilisant **Django** pour le backend et **React** pour le frontend.
 
 ## 🚀 Fonctionnalités Clés
