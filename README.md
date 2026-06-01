@@ -51,8 +51,8 @@ DS-TECH-WEB est une application web moderne de type SaaS permettant la commande 
 ### 📥 Clonage du Projet
 Pour récupérer l'intégralité du code source sur votre machine locale :
 ```bash
-git clone https://github.com/votre-username/DS-TECH-WEB.git
-cd DS-TECH-WEB
+git clone https://github.com/Emera80/FoodMarket.git
+cd FoodMarket
 ```
 
 ### ⚙️ Configuration du Backend
@@ -129,7 +129,8 @@ Le projet suit une architecture propre et modulaire :
 - **Frontend** : Organisation par composants (`components`), pages (`pages`) et services (`services`), favorisant la réutilisation du code.
 
 ## 📝 Auteur
-- **DS-TECH** - [Votre Portefolio](https://votre-lien.com)
-
+**Emeraude TSHIYOYO** — Étudiant en 2e Licence Informatique
+- Portefolio : [Mon Portefolio](https://votre-lien.com)
+- GitHub : [@Emera80](https://github.com/Emera80)
 ---
 *Ce projet a été réalisé dans le cadre d'un développement Fullstack moderne mettant l'accent sur l'expérience utilisateur et la performance.*
